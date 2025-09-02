@@ -1,0 +1,91 @@
+services:
+  kafka:
+    image: bitnami/kafka:latest
+    #    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=INTERNAL://:9092,EXTERNAL://:9093,CONTROLLER://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:9092,EXTERNAL://localhost:9093
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
+      - KAFKA_CFG_LOG_DIRS=/bitnami/kafka/data
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    #    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local-kafka
+      - KAFKA_CLUSTERS_0_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - kafka
+
+  product-db:
+    image: postgres
+    environment:
+      POSTGRES_USER: product
+      POSTGRES_PASSWORD: product
+      POSTGRES_DB: product
+    ports:
+      - "5433:5432"
+    volumes:
+      - product-postgres:/var/lib/postgresql/data
+
+  inventory-db:
+    image: postgres
+    environment:
+      POSTGRES_USER: inventory
+      POSTGRES_PASSWORD: inventory
+      POSTGRES_DB: inventory
+    ports:
+      - "5434:5432"
+    volumes:
+      - inventory-postgres:/var/lib/postgresql/data
+
+  payment-db:
+    image: postgres
+    environment:
+      POSTGRES_USER: payment
+      POSTGRES_PASSWORD: payment
+      POSTGRES_DB: payment
+    ports:
+      - "5435:5432"
+    volumes:
+      - payment-postgres:/var/lib/postgresql/data
+
+  order-db:
+    image: postgres
+    environment:
+      POSTGRES_USER: order
+      POSTGRES_PASSWORD: order
+      POSTGRES_DB: order
+    ports:
+      - "5436:5432"
+    volumes:
+      - order-postgres:/var/lib/postgresql/data
+
+  saga-db:
+    image: postgres
+    environment:
+      POSTGRES_USER: saga
+      POSTGRES_PASSWORD: saga
+      POSTGRES_DB: saga
+    ports:
+      - "5437:5432"
+    volumes:
+      - saga-postgres:/var/lib/postgresql/data
+
+volumes:
+  product-postgres:
+  inventory-postgres:
+  payment-postgres:
+  order-postgres:
+  saga-postgres:

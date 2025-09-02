@@ -1,0 +1,14 @@
+отдельные топики для каждого события (команды) ?
+идемпотентность (inbox) +++
+порядок событий на входе ?
+порядок событий на выходе (только если несколько воркеров) (для саги не важно) ?
+
+
+create order saga
+CreateOrder -> OrderCreated
+ValidateProducts -> ProductsValidated
+ReserveInventory -> InventoryReserved
+ProcessPayment -> PaymentProcessed
+CompleteOrder -> OrderCompleted
+SendNotification -> NotificationSent
+
