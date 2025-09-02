@@ -10,6 +10,7 @@ import (
 	"shop/pkg/command"
 	"shop/pkg/event"
 	"shop/pkg/outbox"
+	"shop/pkg/types"
 	"time"
 
 	"github.com/google/uuid"
@@ -69,7 +70,6 @@ func (o *Orchestrator) executeNextStep(ctx context.Context, s *model.Saga) error
 		if err != nil {
 			return err
 		}
-
 		return nil
 	}
 
@@ -147,15 +147,15 @@ func (o *Orchestrator) compensateNextStep(ctx context.Context, s *model.Saga) er
 func (o *Orchestrator) handleSuccessReply(ctx context.Context, s *model.Saga, e event.Event) error {
 	log.Println("Handling success event: ", e)
 
-	//updatedPayload, err := updatePayload(s.Payload, e.Payload, reply.Command)
-	//if err != nil {
-	//	return err
-	//}
-	//s.Payload = updatedPayload
+	updatedPayload, err := updatePayload(s.Payload, e)
+	if err != nil {
+		return err
+	}
+	s.Payload = updatedPayload
 	s.Steps[s.CurrentStep].CommandStatus = model.StepStatusCompleted
 	s.CurrentStep++
 
-	err := o.repo.Update(ctx, s)
+	err = o.repo.Update(ctx, s)
 	if err != nil {
 		return err
 	}
@@ -318,33 +318,47 @@ func (o *Orchestrator) HandleEvent(ctx context.Context, event event.Event) error
 	return nil
 }
 
-func updatePayload(payload model.SagaPayload, newJson json.RawMessage, cmd command.Command) (model.SagaPayload, error) {
-	var newPayload model.SagaPayload
-	err := json.Unmarshal(newJson, &newPayload)
-	if err != nil {
-		return model.SagaPayload{}, err
-	}
+func updatePayload(payload types.SagaPayload, e event.Event) (types.SagaPayload, error) {
+	log.Println("Updating payload")
+	log.Println(e.Payload)
+	switch e.Payload.(type) {
 
-	if newPayload.OrderId != "" {
-		payload.OrderId = newPayload.OrderId
-	}
-	if newPayload.PaymentSum != 0 {
-		payload.PaymentSum = newPayload.PaymentSum
-	}
-	if newPayload.PaymentID != "" {
-		payload.PaymentID = newPayload.PaymentID
-	}
-	if newPayload.NotificationID != "" {
-		payload.NotificationID = newPayload.NotificationID
-	}
+	case event.OrderCreatedPayload:
+		payload.OrderId = e.Payload.(event.OrderCreatedPayload).OrderID
+		payload.UserID = e.Payload.(event.OrderCreatedPayload).UserID
+		payload.PaymentMethodID = e.Payload.(event.OrderCreatedPayload).PaymentMethodID
+		payload.OrderItems = e.Payload.(event.OrderCreatedPayload).OrderItems
+	case event.OrderCreateFailedPayload:
 
-	if cmd.Type == command.ValidateProducts {
-		payload.OrderItems = newPayload.OrderItems
+	case event.ProductsValidatedPayload:
+		payload.OrderItems = e.Payload.(event.ProductsValidatedPayload).OrderItems
+	case event.ProductsValidationFailedPayload:
+
+	case event.InventoryReservedPayload:
+	case event.InventoryReserveFailedPayload:
+
+	case event.PaymentCompletedPayload:
+		payload.PaymentID = e.Payload.(event.PaymentCompletedPayload).PaymentID
+		payload.PaymentSum = e.Payload.(event.PaymentCompletedPayload).PaymentSum
+		payload.PaymentExternalID = e.Payload.(event.PaymentCompletedPayload).PaymentExternalID
+	case event.PaymentFailedPayload:
+
+	case event.PaymentRefundedPayload:
+	case event.PaymentRefundFailedPayload:
+
+	case event.OrderCompletedPayload:
+	case event.OrderCompleteFailedPayload:
+
+	case event.OrderCancelledPayload:
+
+	default:
+		log.Println("Unknown payload type: ", e.Payload)
+		return types.SagaPayload{}, errors.New("unknown payload type")
 	}
 
 	return payload, nil
 }
 
-func mapPayload(cmd command.Command, payload model.SagaPayload) model.SagaPayload {
-	return model.SagaPayload{}
-}
+//func mapPayload(cmd command.Command, payload model.SagaPayload) model.SagaPayload {
+//	return model.SagaPayload{}
+//}

@@ -2,11 +2,13 @@ package service
 
 import (
 	"context"
-	"github.com/google/uuid"
 	"log"
 	"shop/order/internal/model"
 	"shop/order/internal/repository"
 	"shop/pkg/event"
+	"shop/pkg/types"
+
+	"github.com/google/uuid"
 )
 
 type OrderService struct {
@@ -27,27 +29,27 @@ func (s *OrderService) Store(ctx context.Context, order model.Order) (model.Orde
 		return model.Order{}, e, err
 	}
 
-	var items []event.OrderCreatedItem
+	var items []types.Item
 	for _, item := range o.Items {
-		items = append(items, event.OrderCreatedItem{
-			ProductId: item.ProductID,
+		items = append(items, types.Item{
+			ProductID: item.ProductID,
 			Quantity:  item.Quantity,
 		})
 	}
 	payload := event.OrderCreatedPayload{
-		ID:              o.ID,
+		OrderID:         o.ID,
 		UserID:          o.UserID,
 		PaymentMethodID: o.PaymentMethodID,
 		Phone:           o.Phone,
 		Email:           o.Email,
 		Status:          string(o.Status),
-		Items:           items,
+		OrderItems:      items,
 		CreatedAt:       o.CreatedAt,
 		UpdatedAt:       o.UpdatedAt,
 	}
 	e = event.Event{
 		ID:      uuid.New().String(),
-		Type:    event.TypeOrderCreated,
+		Type:    event.OrderCreated,
 		Payload: payload,
 	}
 
@@ -70,7 +72,7 @@ func (s *OrderService) Complete(ctx context.Context, orderID string) (event.Even
 	}
 	e = event.Event{
 		ID:      uuid.New().String(),
-		Type:    event.TypeOrderCompleted,
+		Type:    event.OrderCompleted,
 		Payload: payload,
 	}
 

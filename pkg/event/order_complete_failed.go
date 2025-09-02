@@ -1,6 +1,6 @@
 package event
 
-const TypeOrderCompleteFailed Type = "OrderCompleteFailed"
+const OrderCompleteFailed Type = "OrderCompleteFailed"
 
 type OrderCompleteFailedPayload struct {
 	OrderID string `json:"order_id"`

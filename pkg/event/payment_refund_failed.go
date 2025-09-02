@@ -1,6 +1,6 @@
 package event
 
-const TypePaymentRefundFailed = "PaymentRefundFailed"
+const PaymentRefundFailed = "PaymentRefundFailed"
 
 type PaymentRefundFailedPayload struct {
 	PaymentID string `json:"payment_id"`

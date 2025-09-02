@@ -5,16 +5,16 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/google/uuid"
 	"log"
 	"shop/pkg/broker"
 	"shop/pkg/command"
 	"shop/pkg/event"
 	"shop/pkg/inbox"
 	"shop/pkg/outbox"
-	"shop/product/internal/model"
 	"shop/product/internal/service"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type CommandHandler struct {
@@ -104,20 +104,6 @@ func (h *CommandHandler) Handle(message broker.Message) error {
 	var e event.Event
 
 	switch cmd.Type {
-	case command.CreateCategory:
-		h.logger.Printf("Create category command: %+v", cmd)
-		e, err = h.handleCreateCategory(ctxWithTx, cmd.Payload)
-		if err != nil {
-			return err
-		}
-		h.logger.Printf("Create category complete")
-	case command.CreateProduct:
-		h.logger.Printf("Handling create product: %+v", cmd)
-		e, err = h.handleCreateProduct(ctxWithTx, cmd.Payload)
-		if err != nil {
-			return err
-		}
-		h.logger.Printf("Create product complete")
 	case command.ValidateProducts:
 		h.logger.Printf("Handling validate products: %+v", cmd)
 		e, err = h.handleValidateProducts(ctxWithTx, cmd.Payload)
@@ -160,58 +146,6 @@ func (h *CommandHandler) Handle(message broker.Message) error {
 	return nil
 }
 
-func (h *CommandHandler) handleCreateCategory(ctx context.Context, jsonPayload json.RawMessage) (event.Event, error) {
-	h.logger.Printf("Handle create category: %+v", jsonPayload)
-	var e event.Event
-
-	var payload command.CreateCategoryPayload
-	err := json.Unmarshal(jsonPayload, &payload)
-	if err != nil {
-		h.logger.Printf("Error unmarshalling payload: %s", err)
-		return e, err
-	}
-
-	category := model.Category{
-		ID:   uuid.New().String(),
-		Name: payload.Name,
-	}
-	cat, e, err := h.categoryService.Store(ctx, category)
-	if err != nil {
-		h.logger.Printf("Failed to store category: %s", err)
-		return e, err
-	}
-	h.logger.Printf("Created category with id: %s", cat.ID)
-
-	return e, nil
-}
-
-func (h *CommandHandler) handleCreateProduct(ctx context.Context, jsonPayload json.RawMessage) (event.Event, error) {
-	h.logger.Printf("Handle create product: %+v", jsonPayload)
-	var e event.Event
-
-	var payload command.CreateProductPayload
-	err := json.Unmarshal(jsonPayload, &payload)
-	if err != nil {
-		h.logger.Printf("Error unmarshalling payload: %s", err)
-		return e, err
-	}
-
-	product := model.Product{
-		ID:         uuid.New().String(),
-		Name:       payload.Name,
-		Price:      payload.Price,
-		CategoryID: payload.CategoryID,
-	}
-	prod, e, err := h.productService.Store(ctx, product)
-	if err != nil {
-		h.logger.Printf("Failed to store product: %s", err)
-		return e, err
-	}
-	h.logger.Printf("Created product with id: %s", prod.ID)
-
-	return e, nil
-}
-
 func (h *CommandHandler) handleValidateProducts(ctx context.Context, jsonPayload json.RawMessage) (event.Event, error) {
 	h.logger.Printf("Handle create product: %+v", jsonPayload)
 	var e event.Event
@@ -223,12 +157,7 @@ func (h *CommandHandler) handleValidateProducts(ctx context.Context, jsonPayload
 		return e, err
 	}
 
-	var productIDs []string
-	for _, pr := range payload.OrderItems {
-		productIDs = append(productIDs, pr.ID)
-	}
-
-	e, err = h.productService.ValidateProductsByIds(ctx, productIDs)
+	e, err = h.productService.ValidateProductsByIds(ctx, payload.OrderItems)
 	if err != nil {
 		h.logger.Printf("Failed to validate products: %s", err)
 		return e, err

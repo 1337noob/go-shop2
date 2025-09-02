@@ -13,6 +13,7 @@ import (
 	"shop/pkg/broker"
 	"shop/pkg/inbox"
 	"shop/pkg/outbox"
+	"shop/pkg/types"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -92,7 +93,7 @@ func main() {
 	}
 
 	// subscribe event handler
-	eventHandler := handler.NewEventHandler(db, svc, in, out, logger)
+	eventHandler := handler.NewEventHandler(db, orc, in, out, logger)
 	err = br.Subscribe(productEventTopic, eventHandler)
 	if err != nil {
 		logger.Fatalf("failed to subscribe to commands topic: %v", err)
@@ -117,7 +118,7 @@ func main() {
 	defer tx.Rollback()
 	ctxWithTx := context.WithValue(context.Background(), "tx", tx)
 
-	createOrderSaga := model.NewCreateOrderSaga("user-1", []model.OrderItem{
+	createOrderSaga := model.NewCreateOrderSaga("user-1", []types.Item{
 		{
 			ProductID: "product-1",
 			Quantity:  11,

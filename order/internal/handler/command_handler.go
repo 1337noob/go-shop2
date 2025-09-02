@@ -167,7 +167,7 @@ func (h *CommandHandler) handleCreateOrder(ctx context.Context, jsonPayload json
 		items = append(items, model.OrderItem{
 			ID:        uuid.New().String(),
 			OrderID:   orderID,
-			ProductID: item.ProductId,
+			ProductID: item.ProductID,
 			Quantity:  item.Quantity,
 			CreatedAt: timeNow,
 			UpdatedAt: timeNow,

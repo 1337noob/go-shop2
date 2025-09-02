@@ -1,8 +1,10 @@
 package event
 
-const TypeProductsValidationFailed Type = "ProductsValidationFailed"
+import "shop/pkg/types"
+
+const ProductsValidationFailed Type = "ProductsValidationFailed"
 
 type ProductsValidationFailedPayload struct {
-	Products []Product
-	Error    string `json:"error"`
+	OrderItems []types.Item `json:"order_items"`
+	Error      string       `json:"error"`
 }

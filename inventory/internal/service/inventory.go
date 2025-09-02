@@ -68,7 +68,7 @@ func (s *InventoryService) Reserve(ctx context.Context, sagaID string, items []m
 	}
 	e = event.Event{
 		ID:      eventID,
-		Type:    event.TypeInventoryReserved,
+		Type:    event.InventoryReserved,
 		SagaID:  sagaID,
 		Payload: payload,
 	}
@@ -100,7 +100,7 @@ func (s *InventoryService) Release(ctx context.Context, sagaID string, items []m
 	}
 	e = event.Event{
 		ID:      eventID,
-		Type:    event.TypeInventoryReleased,
+		Type:    event.InventoryReleased,
 		SagaID:  sagaID,
 		Payload: payload,
 	}

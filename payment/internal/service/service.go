@@ -56,7 +56,7 @@ func (s *PaymentService) Process(ctx context.Context, payment model.Payment) (mo
 		}
 		e = event.Event{
 			ID:      eventID,
-			Type:    event.TypePaymentFailed,
+			Type:    event.PaymentFailed,
 			Payload: p,
 		}
 
@@ -75,7 +75,7 @@ func (s *PaymentService) Process(ctx context.Context, payment model.Payment) (mo
 	}
 	e = event.Event{
 		ID:      eventID,
-		Type:    event.TypePaymentCompleted,
+		Type:    event.PaymentCompleted,
 		Payload: p,
 	}
 

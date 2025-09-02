@@ -1,8 +1,10 @@
 package event
 
-const TypeInventoryReserveFailed Type = "InventoryReserveFailed"
+import "shop/pkg/types"
+
+const InventoryReserveFailed Type = "InventoryReserveFailed"
 
 type InventoryReserveFailedPayload struct {
-	Items []InventoryItem `json:"items"`
-	Error string          `json:"error"`
+	OrderItems []types.Item `json:"order_items"`
+	Error      string       `json:"error"`
 }

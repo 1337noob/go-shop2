@@ -1,12 +1,9 @@
 package command
 
+import "shop/pkg/types"
+
 const ReserveInventory Type = "ReserveInventory"
 
-type InventoryItem struct {
-	ProductId string `json:"product_id"`
-	Quantity  int    `json:"quantity"`
-}
-
 type ReserveProductsPayload struct {
-	Items []InventoryItem `json:"items"`
+	OrderItems []types.Item `json:"order_items"`
 }

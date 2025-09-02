@@ -3,31 +3,32 @@ package model
 import (
 	"shop/pkg/command"
 	"shop/pkg/event"
+	"shop/pkg/types"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-func NewCreateOrderSaga(userID string, items []OrderItem) *Saga {
+func NewCreateOrderSaga(userID string, items []types.Item) *Saga {
 	steps := []Step{
 		// create order
 		{
 			Command:                command.CreateOrder,
 			CommandStatus:          StepStatusInit,
-			CommandSuccessEvent:    event.TypeOrderCreated,
-			CommandFailEvent:       event.TypeOrderCreateFailed,
+			CommandSuccessEvent:    event.OrderCreated,
+			CommandFailEvent:       event.OrderCreateFailed,
 			Compensate:             command.CancelOrder,
 			CompensateStatus:       StepStatusInit,
-			CompensateSuccessEvent: event.TypeOrderCancelled,
-			CompensateFailEvent:    event.TypeOrderCancelFailed,
+			CompensateSuccessEvent: event.OrderCancelled,
+			CompensateFailEvent:    event.OrderCancelFailed,
 			CommandTopic:           "order-commands",
 		},
 		// validate products
 		{
 			Command:                command.ValidateProducts,
 			CommandStatus:          StepStatusInit,
-			CommandSuccessEvent:    event.TypeProductsValidated,
-			CommandFailEvent:       event.TypeProductsValidationFailed,
+			CommandSuccessEvent:    event.ProductsValidated,
+			CommandFailEvent:       event.ProductsValidationFailed,
 			Compensate:             "",
 			CompensateStatus:       "",
 			CompensateSuccessEvent: "",
@@ -38,32 +39,32 @@ func NewCreateOrderSaga(userID string, items []OrderItem) *Saga {
 		{
 			Command:                command.ReserveInventory,
 			CommandStatus:          StepStatusInit,
-			CommandSuccessEvent:    event.TypeInventoryReserved,
-			CommandFailEvent:       event.TypeInventoryReserveFailed,
+			CommandSuccessEvent:    event.InventoryReserved,
+			CommandFailEvent:       event.InventoryReserveFailed,
 			Compensate:             command.ReleaseInventory,
 			CompensateStatus:       StepStatusInit,
-			CompensateSuccessEvent: event.TypeInventoryReleased,
-			CompensateFailEvent:    event.TypeInventoryReleaseFailed,
+			CompensateSuccessEvent: event.InventoryReleased,
+			CompensateFailEvent:    event.InventoryReleaseFailed,
 			CommandTopic:           "inventory-commands",
 		},
 		// process payment
 		{
 			Command:                command.ProcessPayment,
 			CommandStatus:          StepStatusInit,
-			CommandSuccessEvent:    event.TypePaymentCompleted,
-			CommandFailEvent:       event.TypePaymentFailed,
+			CommandSuccessEvent:    event.PaymentCompleted,
+			CommandFailEvent:       event.PaymentFailed,
 			Compensate:             command.RefundPayment,
 			CompensateStatus:       StepStatusInit,
-			CompensateSuccessEvent: event.TypePaymentRefunded,
-			CompensateFailEvent:    event.TypePaymentRefundFailed,
+			CompensateSuccessEvent: event.PaymentRefunded,
+			CompensateFailEvent:    event.PaymentRefundFailed,
 			CommandTopic:           "payment-commands",
 		},
 		// complete order
 		{
 			Command:                command.CompleteOrder,
 			CommandStatus:          StepStatusInit,
-			CommandSuccessEvent:    event.TypeOrderCompleted,
-			CommandFailEvent:       event.TypeOrderCompleteFailed,
+			CommandSuccessEvent:    event.OrderCompleted,
+			CommandFailEvent:       event.OrderCompleteFailed,
 			Compensate:             "",
 			CompensateStatus:       "",
 			CompensateSuccessEvent: "",
@@ -77,7 +78,7 @@ func NewCreateOrderSaga(userID string, items []OrderItem) *Saga {
 		CurrentStep: 0,
 		Status:      StatusInit,
 		Steps:       steps,
-		Payload: SagaPayload{
+		Payload: types.SagaPayload{
 			UserID:     userID,
 			OrderItems: items,
 		},

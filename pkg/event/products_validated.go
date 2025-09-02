@@ -1,13 +1,9 @@
 package event
 
-const TypeProductsValidated Type = "ProductsValidated"
+import "shop/pkg/types"
 
-type Product struct {
-	ID    string `json:"id"`
-	Name  string `json:"name"`
-	Price int    `json:"price"`
-}
+const ProductsValidated Type = "ProductsValidated"
 
 type ProductsValidatedPayload struct {
-	Products []Product
+	OrderItems []types.Item `json:"order_items"`
 }

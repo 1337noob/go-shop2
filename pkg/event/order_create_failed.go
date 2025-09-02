@@ -1,8 +1,8 @@
 package event
 
-const TypeOrderCreateFailed Type = "OrderCreateFailed"
+const OrderCreateFailed Type = "OrderCreateFailed"
 
 type OrderCreateFailedPayload struct {
-	ID    string `json:"id"`
-	Error string `json:"error"`
+	OrderID string `json:"order_id"`
+	Error   string `json:"error"`
 }

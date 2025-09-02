@@ -1,12 +1,9 @@
 package event
 
-const TypeInventoryReserved Type = "InventoryReserved"
+import "shop/pkg/types"
 
-type InventoryItem struct {
-	ProductID string `json:"product_id"`
-	Quantity  int    `json:"quantity"`
-}
+const InventoryReserved Type = "InventoryReserved"
 
 type InventoryReservedPayload struct {
-	Items []InventoryItem `json:"items"`
+	OrderItems []types.Item `json:"order_items"`
 }

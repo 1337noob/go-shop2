@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/google/uuid"
 	"log"
 	"shop/pkg/event"
-	"shop/product/internal/model"
+	"shop/pkg/types"
 	"shop/product/internal/repository"
+
+	"github.com/google/uuid"
 )
 
 type ProductService struct {
@@ -20,46 +21,23 @@ func NewProductService(repo repository.ProductRepository, logger *log.Logger) *P
 	return &ProductService{repo: repo, logger: logger}
 }
 
-func (s *ProductService) Store(ctx context.Context, product model.Product) (model.Product, event.Event, error) {
+func (s *ProductService) ValidateProductsByIds(ctx context.Context, items []types.Item) (event.Event, error) {
 	var e event.Event
-
-	prod, err := s.repo.Create(ctx, product)
-	if err != nil {
-		s.logger.Println("failed to create product", "error", err)
-		return model.Product{}, e, err
-	}
-
-	p := event.ProductCreatedPayload{
-		ID:         prod.ID,
-		Name:       prod.Name,
-		Price:      prod.Price,
-		CategoryID: prod.CategoryID,
-	}
-	e = event.Event{
-		ID:      uuid.New().String(),
-		Type:    event.TypeProductCreated,
-		Payload: p,
-	}
-
-	return prod, e, nil
-}
-
-func (s *ProductService) ValidateProductsByIds(ctx context.Context, ids []string) (event.Event, error) {
-	var e event.Event
-	var validatedProducts []event.Product
+	var validatedItems []types.Item
 
 	eventId := uuid.New().String()
 
-	for _, id := range ids {
-		prod, err := s.repo.FindById(ctx, id)
+	for _, item := range items {
+		product, err := s.repo.FindById(ctx, item.ProductID)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				s.logger.Println("failed to find product", "error", err)
 				e = event.Event{
 					ID:   eventId,
-					Type: event.TypeProductsValidationFailed,
+					Type: event.ProductsValidationFailed,
 					Payload: event.ProductsValidationFailedPayload{
-						Error: err.Error(),
+						OrderItems: items,
+						Error:      err.Error(),
 					},
 				}
 			}
@@ -68,19 +46,19 @@ func (s *ProductService) ValidateProductsByIds(ctx context.Context, ids []string
 			return e, err
 		}
 
-		validatedProducts = append(validatedProducts, event.Product{
-			ID:    prod.ID,
-			Name:  prod.Name,
-			Price: prod.Price,
+		validatedItems = append(validatedItems, types.Item{
+			ProductID: product.ID,
+			Name:      product.Name,
+			Price:     product.Price,
 		})
 	}
 
 	p := event.ProductsValidatedPayload{
-		Products: validatedProducts,
+		OrderItems: validatedItems,
 	}
 	e = event.Event{
 		ID:      eventId,
-		Type:    event.TypeProductsValidated,
+		Type:    event.ProductsValidated,
 		Payload: p,
 	}
 
