@@ -117,24 +117,26 @@ func main() {
 	defer tx.Rollback()
 	ctxWithTx := context.WithValue(context.Background(), "tx", tx)
 
-	createOrderSaga := model.NewCreateOrderSaga(
-		"user-1",
-		[]types.Item{
-			{
-				ProductID: "product-1",
-				Quantity:  11,
+	for i := 0; i < 100; i++ {
+		createOrderSaga := model.NewCreateOrderSaga(
+			"user-1",
+			[]types.Item{
+				{
+					ProductID: "product-1",
+					Quantity:  11,
+				},
+				{
+					ProductID: "product-2",
+					Quantity:  21,
+				},
 			},
-			{
-				ProductID: "product-2",
-				Quantity:  21,
-			},
-		},
-		"method-1",
-	)
-	err = orc.StartSaga(ctxWithTx, createOrderSaga)
-	if err != nil {
-		logger.Fatal("failed to start saga order", "error", err)
-		return
+			"method-1",
+		)
+		err = orc.StartSaga(ctxWithTx, createOrderSaga)
+		if err != nil {
+			logger.Fatal("failed to start saga order", "error", err)
+			return
+		}
 	}
 	err = tx.Commit()
 	if err != nil {

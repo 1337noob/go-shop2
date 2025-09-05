@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/IBM/sarama"
 	"log"
 	"shop/pkg/inbox"
 	"sync"
+
+	"github.com/IBM/sarama"
 )
 
 type KafkaBroker struct {
