@@ -9,7 +9,6 @@ import (
 	"shop/order_saga/internal/model"
 	"shop/order_saga/internal/orchestrator"
 	"shop/order_saga/internal/repository"
-	"shop/order_saga/internal/service"
 	"shop/pkg/broker"
 	"shop/pkg/inbox"
 	"shop/pkg/outbox"
@@ -21,7 +20,7 @@ import (
 )
 
 func main() {
-	commandsTopic := "order-saga-commands"
+	//commandsTopic := "order-saga-commands"
 	productEventTopic := "product-events"
 	inventoryEventTopic := "inventory-events"
 	orderEventTopic := "order-events"
@@ -44,8 +43,8 @@ func main() {
 	out := outbox.NewPostgresOutbox()
 
 	orderRepo := repository.NewPostgresSagaRepo()
-	orc := orchestrator.NewOrchestrator(orderRepo, out)
-	svc := service.NewOrderSagaService(orc, logger)
+	orc := orchestrator.NewOrchestrator(orderRepo, out, logger)
+	//svc := service.NewOrderSagaService(orc, logger)
 
 	brokers := []string{"localhost:9093"}
 
@@ -86,11 +85,11 @@ func main() {
 	}()
 
 	// subscribe command handler
-	commandHandler := handler.NewCommandHandler(db, svc, in, out, logger)
-	err = br.Subscribe(commandsTopic, commandHandler)
-	if err != nil {
-		logger.Fatalf("failed to subscribe to commands topic: %v", err)
-	}
+	//commandHandler := handler.NewCommandHandler(db, svc, in, out, logger)
+	//err = br.Subscribe(commandsTopic, commandHandler)
+	//if err != nil {
+	//	logger.Fatalf("failed to subscribe to commands topic: %v", err)
+	//}
 
 	// subscribe event handler
 	eventHandler := handler.NewEventHandler(db, orc, in, out, logger)
@@ -118,16 +117,20 @@ func main() {
 	defer tx.Rollback()
 	ctxWithTx := context.WithValue(context.Background(), "tx", tx)
 
-	createOrderSaga := model.NewCreateOrderSaga("user-1", []types.Item{
-		{
-			ProductID: "product-1",
-			Quantity:  11,
+	createOrderSaga := model.NewCreateOrderSaga(
+		"user-1",
+		[]types.Item{
+			{
+				ProductID: "product-1",
+				Quantity:  11,
+			},
+			{
+				ProductID: "product-2",
+				Quantity:  21,
+			},
 		},
-		{
-			ProductID: "product-2",
-			Quantity:  21,
-		},
-	})
+		"method-1",
+	)
 	err = orc.StartSaga(ctxWithTx, createOrderSaga)
 	if err != nil {
 		logger.Fatal("failed to start saga order", "error", err)
@@ -139,7 +142,7 @@ func main() {
 	}
 
 	br.StartConsume([]string{
-		commandsTopic,
+		//commandsTopic,
 		productEventTopic,
 		inventoryEventTopic,
 		orderEventTopic,

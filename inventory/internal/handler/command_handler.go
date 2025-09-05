@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/google/uuid"
 	"log"
 	"shop/inventory/internal/model"
 	"shop/inventory/internal/service"
@@ -15,6 +14,8 @@ import (
 	"shop/pkg/inbox"
 	"shop/pkg/outbox"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type CommandHandler struct {
@@ -101,12 +102,6 @@ func (h *CommandHandler) Handle(message broker.Message) error {
 	var e event.Event
 
 	switch cmd.Type {
-	case command.CreateInventory:
-		h.logger.Printf("Create inventory command: %+v", cmd)
-		e, err = h.handleCreateInventory(ctxWithTx, cmd.Payload)
-		if err != nil {
-			return err
-		}
 	case command.ReserveInventory:
 		h.logger.Printf("Reserve products command: %+v", cmd)
 		e, err = h.handleReserve(ctxWithTx, cmd)
@@ -154,48 +149,20 @@ func (h *CommandHandler) Handle(message broker.Message) error {
 	return nil
 }
 
-func (h *CommandHandler) handleCreateInventory(ctx context.Context, jsonPayload json.RawMessage) (event.Event, error) {
-	h.logger.Printf("Handle create inventory: %+v", jsonPayload)
-	var e event.Event
-
-	var payload command.CreateInventoryPayload
-	err := json.Unmarshal(jsonPayload, &payload)
-	if err != nil {
-		h.logger.Printf("Error unmarshalling payload: %s", err)
-		return e, err
-	}
-
-	inventory := model.Inventory{
-		ProductID: payload.ProductID,
-		Quantity:  payload.Quantity,
-		//ReservedQuantity: payload.ReservedQuantity,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
-	inv, e, err := h.inventoryService.Store(ctx, inventory)
-	if err != nil {
-		h.logger.Printf("Error storing inventory: %s", err)
-		return e, err
-	}
-	h.logger.Printf("Inventory stored with id: %s", inv.ProductID)
-
-	return e, nil
-}
-
 func (h *CommandHandler) handleReserve(ctx context.Context, cmd command.Command) (event.Event, error) {
 	h.logger.Printf("Handle reserve products: %+v", cmd)
 	var e event.Event
 
-	var payload command.ReserveProductsPayload
+	var payload command.ReserveInventoryPayload
 	err := json.Unmarshal(cmd.Payload, &payload)
 	if err != nil {
 		h.logger.Printf("Error unmarshalling payload: %s", err)
 		return e, err
 	}
 	var items []model.Item
-	for _, item := range payload.Items {
+	for _, item := range payload.OrderItems {
 		items = append(items, model.Item{
-			ProductID: item.ProductId,
+			ProductID: item.ProductID,
 			Quantity:  item.Quantity,
 		})
 	}
@@ -213,7 +180,7 @@ func (h *CommandHandler) handleRelease(ctx context.Context, cmd command.Command)
 	h.logger.Printf("Handle release products: %+v", cmd)
 	var e event.Event
 
-	var payload command.ReleaseProductsPayload
+	var payload command.ReleaseInventoryPayload
 	err := json.Unmarshal(cmd.Payload, &payload)
 	if err != nil {
 		h.logger.Printf("Error unmarshalling payload: %s", err)
@@ -221,9 +188,9 @@ func (h *CommandHandler) handleRelease(ctx context.Context, cmd command.Command)
 	}
 
 	var items []model.Item
-	for _, item := range payload.Items {
+	for _, item := range payload.OrderItems {
 		items = append(items, model.Item{
-			ProductID: item.ProductId,
+			ProductID: item.ProductID,
 			Quantity:  item.Quantity,
 		})
 	}

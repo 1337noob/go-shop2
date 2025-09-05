@@ -4,6 +4,6 @@ import "shop/pkg/types"
 
 const ReserveInventory Type = "ReserveInventory"
 
-type ReserveProductsPayload struct {
+type ReserveInventoryPayload struct {
 	OrderItems []types.Item `json:"order_items"`
 }

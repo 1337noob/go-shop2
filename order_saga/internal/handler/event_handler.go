@@ -36,14 +36,7 @@ func (h *EventHandler) Handle(message broker.Message) error {
 	h.logger.Printf("Handling message %s from %s", message.Key, message.Topic)
 	h.logger.Println(string(message.Value))
 
-	type eventWithRawPayload struct {
-		ID      string          `json:"event_id"`
-		Type    event.Type      `json:"event_type"`
-		SagaID  string          `json:"saga_id"`
-		Payload json.RawMessage `json:"payload"`
-	}
-
-	var e eventWithRawPayload
+	var e event.Event
 	err := json.Unmarshal(message.Value, &e)
 	if err != nil {
 		h.logger.Printf("Error unmarshalling command: %s", err)
@@ -103,41 +96,7 @@ func (h *EventHandler) Handle(message broker.Message) error {
 
 	ctxWithTx = context.WithValue(context.Background(), "tx", tx)
 
-	var ev event.Event
-	var p any
-	switch e.Type {
-
-	case event.OrderCreated:
-		h.logger.Printf("Order created event: %+v", e)
-		p = event.OrderCreatedPayload{}
-		err = json.Unmarshal(e.Payload, &p)
-		if err != nil {
-			h.logger.Printf("Error unmarshalling payload: %s", err)
-			return err
-		}
-
-	case event.OrderCreateFailed:
-		h.logger.Printf("Order create failed event: %+v", e)
-		p = event.OrderCreateFailedPayload{}
-		err = json.Unmarshal(e.Payload, &p)
-		if err != nil {
-			h.logger.Printf("Error unmarshalling payload: %s", err)
-			return err
-		}
-
-	default:
-		return errors.New("invalid event type")
-
-	}
-
-	ev = event.Event{
-		ID:      e.ID,
-		Type:    e.Type,
-		SagaID:  e.SagaID,
-		Payload: p,
-	}
-
-	err = h.orchestrator.HandleEvent(ctxWithTx, ev)
+	err = h.orchestrator.HandleEvent(ctxWithTx, e)
 	if err != nil {
 		h.logger.Printf("Error orc handling event: %s", err)
 		return err

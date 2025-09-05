@@ -28,7 +28,7 @@ type Saga struct {
 
 //type SagaPayload struct {
 //	UserID              string      `json:"user_id"`
-//	OrderId             string      `json:"order_id"`
+//	OrderID             string      `json:"order_id"`
 //	OrderItems          []SagaOrderItem `json:"order_items"`
 //	PaymentID           string      `json:"payment_id"`
 //	PaymentSum          int         `json:"payment_sum"`

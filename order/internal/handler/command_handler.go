@@ -114,6 +114,12 @@ func (h *CommandHandler) Handle(message broker.Message) error {
 		if err != nil {
 			return err
 		}
+	case command.CancelOrder:
+		h.logger.Printf("Cancel order command: %+v", cmd)
+		e, err = h.handleCancelOrder(ctxWithTx, cmd.Payload)
+		if err != nil {
+			return err
+		}
 	default:
 		return errors.New("invalid command")
 	}
@@ -177,12 +183,12 @@ func (h *CommandHandler) handleCreateOrder(ctx context.Context, jsonPayload json
 		ID:              orderID,
 		UserID:          payload.UserID,
 		PaymentMethodID: payload.PaymentMethodID,
-		Phone:           payload.Phone,
-		Email:           payload.Email,
-		Status:          model.OrderStatusCreated,
-		Items:           items,
-		CreatedAt:       timeNow,
-		UpdatedAt:       timeNow,
+		//Phone:           payload.Phone,
+		//Email:           payload.Email,
+		Status:    model.OrderStatusCreated,
+		Items:     items,
+		CreatedAt: timeNow,
+		UpdatedAt: timeNow,
 	}
 	o, e, err := h.orderService.Store(ctx, order)
 	if err != nil {
@@ -211,6 +217,27 @@ func (h *CommandHandler) handleCompleteOrder(ctx context.Context, jsonPayload js
 		return e, err
 	}
 	h.logger.Printf("Order completed with id: %s", payload.OrderID)
+
+	return e, nil
+}
+
+func (h *CommandHandler) handleCancelOrder(ctx context.Context, jsonPayload json.RawMessage) (event.Event, error) {
+	h.logger.Printf("Handle cancel order: %+v", jsonPayload)
+	var e event.Event
+
+	var payload command.CancelOrderPayload
+	err := json.Unmarshal(jsonPayload, &payload)
+	if err != nil {
+		h.logger.Printf("Error unmarshalling payload: %s", err)
+		return e, err
+	}
+
+	e, err = h.orderService.Cancel(ctx, payload.OrderID)
+	if err != nil {
+		h.logger.Printf("Error storing order: %s", err)
+		return e, err
+	}
+	h.logger.Printf("Order cancelled with id: %s", payload.OrderID)
 
 	return e, nil
 }

@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func NewCreateOrderSaga(userID string, items []types.Item) *Saga {
+func NewCreateOrderSaga(userID string, items []types.Item, paymentMethod string) *Saga {
 	steps := []Step{
 		// create order
 		{
@@ -33,7 +33,7 @@ func NewCreateOrderSaga(userID string, items []types.Item) *Saga {
 			CompensateStatus:       "",
 			CompensateSuccessEvent: "",
 			CompensateFailEvent:    "",
-			CommandTopic:           "order-commands",
+			CommandTopic:           "product-commands",
 		},
 		// reserve inventory
 		{
@@ -73,17 +73,20 @@ func NewCreateOrderSaga(userID string, items []types.Item) *Saga {
 		},
 	}
 
+	timeNow := time.Now()
+
 	return &Saga{
 		ID:          uuid.New().String(),
 		CurrentStep: 0,
 		Status:      StatusInit,
 		Steps:       steps,
 		Payload: types.SagaPayload{
-			UserID:     userID,
-			OrderItems: items,
+			UserID:          userID,
+			OrderItems:      items,
+			PaymentMethodID: paymentMethod,
 		},
 		Compensating: false,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
+		CreatedAt:    timeNow,
+		UpdatedAt:    timeNow,
 	}
 }

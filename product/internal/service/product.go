@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"log"
 	"shop/pkg/event"
@@ -32,13 +33,18 @@ func (s *ProductService) ValidateProductsByIds(ctx context.Context, items []type
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				s.logger.Println("failed to find product", "error", err)
+				jsonPayload, err := json.Marshal(event.ProductsValidationFailedPayload{
+					OrderItems: items,
+					Error:      err.Error(),
+				})
+				if err != nil {
+					s.logger.Println("failed to marshal payload", "error", err)
+					return e, err
+				}
 				e = event.Event{
-					ID:   eventId,
-					Type: event.ProductsValidationFailed,
-					Payload: event.ProductsValidationFailedPayload{
-						OrderItems: items,
-						Error:      err.Error(),
-					},
+					ID:      eventId,
+					Type:    event.ProductsValidationFailed,
+					Payload: jsonPayload,
 				}
 			}
 
@@ -56,10 +62,15 @@ func (s *ProductService) ValidateProductsByIds(ctx context.Context, items []type
 	p := event.ProductsValidatedPayload{
 		OrderItems: validatedItems,
 	}
+	jsonPayload, err := json.Marshal(p)
+	if err != nil {
+		s.logger.Println("failed to marshal payload", "error", err)
+		return e, err
+	}
 	e = event.Event{
 		ID:      eventId,
 		Type:    event.ProductsValidated,
-		Payload: p,
+		Payload: jsonPayload,
 	}
 
 	return e, nil

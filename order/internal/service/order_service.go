@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"shop/order/internal/model"
 	"shop/order/internal/repository"
@@ -47,10 +48,15 @@ func (s *OrderService) Store(ctx context.Context, order model.Order) (model.Orde
 		CreatedAt:       o.CreatedAt,
 		UpdatedAt:       o.UpdatedAt,
 	}
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		s.logger.Println("failed to marshal payload", "error", err)
+		return model.Order{}, e, err
+	}
 	e = event.Event{
 		ID:      uuid.New().String(),
 		Type:    event.OrderCreated,
-		Payload: payload,
+		Payload: jsonPayload,
 	}
 
 	return o, e, nil
@@ -70,10 +76,43 @@ func (s *OrderService) Complete(ctx context.Context, orderID string) (event.Even
 		OrderID: orderID,
 		Status:  string(newStatus),
 	}
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		s.logger.Println("failed to marshal payload", "error", err)
+		return e, err
+	}
 	e = event.Event{
 		ID:      uuid.New().String(),
 		Type:    event.OrderCompleted,
-		Payload: payload,
+		Payload: jsonPayload,
+	}
+
+	return e, nil
+}
+
+func (s *OrderService) Cancel(ctx context.Context, orderID string) (event.Event, error) {
+	var e event.Event
+
+	newStatus := model.OrderStatusCancelled
+	err := s.repo.UpdateStatus(ctx, orderID, newStatus)
+	if err != nil {
+		s.logger.Println("failed to complete order", "error", err)
+		return e, err
+	}
+
+	payload := event.OrderCancelledPayload{
+		OrderID: orderID,
+		Status:  string(newStatus),
+	}
+	jsonPayload, err := json.Marshal(payload)
+	if err != nil {
+		s.logger.Println("failed to marshal payload", "error", err)
+		return e, err
+	}
+	e = event.Event{
+		ID:      uuid.New().String(),
+		Type:    event.OrderCancelled,
+		Payload: jsonPayload,
 	}
 
 	return e, nil

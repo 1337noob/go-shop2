@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/google/uuid"
 	"log"
 	"shop/payment/internal/model"
 	"shop/payment/internal/service"
@@ -15,6 +14,8 @@ import (
 	"shop/pkg/inbox"
 	"shop/pkg/outbox"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type CommandHandler struct {
@@ -103,12 +104,6 @@ func (h *CommandHandler) Handle(message broker.Message) error {
 	var e event.Event
 
 	switch cmd.Type {
-	case command.CreatePaymentMethod:
-		h.logger.Printf("Create payment method command: %+v", cmd)
-		e, err = h.handleCreatePaymentMethod(ctxWithTx, cmd.Payload)
-		if err != nil {
-			return err
-		}
 	case command.ProcessPayment:
 		h.logger.Printf("Process payment command: %+v", cmd)
 		e, err = h.handleProcessPayment(ctxWithTx, cmd.Payload)
@@ -150,34 +145,6 @@ func (h *CommandHandler) Handle(message broker.Message) error {
 	return nil
 }
 
-func (h *CommandHandler) handleCreatePaymentMethod(ctx context.Context, jsonPayload json.RawMessage) (event.Event, error) {
-	h.logger.Printf("Handle create payment method: %+v", jsonPayload)
-	var e event.Event
-
-	var payload command.CreatePaymentMethodPayload
-	err := json.Unmarshal(jsonPayload, &payload)
-	if err != nil {
-		h.logger.Printf("Error unmarshalling payload: %s", err)
-		return e, err
-	}
-
-	method := model.Method{
-		ID:          uuid.New().String(),
-		UserID:      payload.UserID,
-		Gateway:     payload.Gateway,
-		PaymentType: payload.PaymentType,
-		Token:       payload.Token,
-	}
-	m, e, err := h.methodService.Store(ctx, method)
-	if err != nil {
-		h.logger.Printf("Error storing payment method: %s", err)
-		return e, err
-	}
-	h.logger.Printf("Payment method stored with id: %s", m.ID)
-
-	return e, nil
-}
-
 func (h *CommandHandler) handleProcessPayment(ctx context.Context, jsonPayload json.RawMessage) (event.Event, error) {
 	h.logger.Printf("Handle create payment method: %+v", jsonPayload)
 	var e event.Event
@@ -193,10 +160,10 @@ func (h *CommandHandler) handleProcessPayment(ctx context.Context, jsonPayload j
 		ID:         uuid.New().String(),
 		OrderID:    payload.OrderID,
 		UserID:     payload.UserID,
-		Amount:     payload.Amount,
+		Amount:     payload.PaymentSum,
 		ExternalID: "",
 		Status:     model.PaymentStatusPending,
-		MethodID:   payload.MethodID,
+		MethodID:   payload.PaymentMethodID,
 	}
 	pay, e, err := h.paymentService.Process(ctx, payment)
 	if err != nil {

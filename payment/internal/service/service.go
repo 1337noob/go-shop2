@@ -2,12 +2,14 @@ package service
 
 import (
 	"context"
-	"github.com/google/uuid"
+	"encoding/json"
 	"log"
 	"shop/payment/internal/model"
 	"shop/payment/internal/repository"
 	"shop/pkg/event"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type PaymentService struct {
@@ -38,7 +40,7 @@ func (s *PaymentService) Process(ctx context.Context, payment model.Payment) (mo
 	completedStatus := model.PaymentStatusCompleted
 	failedStatus := model.PaymentStatusFailed
 
-	if pay.MethodID == "fail" {
+	if pay.MethodID == "method-fail" {
 		err = s.paymentRepo.UpdateStatus(ctx, pay.ID, failedStatus)
 		if err != nil {
 			s.logger.Printf("Update Payment Failed: %v", err)
@@ -46,18 +48,23 @@ func (s *PaymentService) Process(ctx context.Context, payment model.Payment) (mo
 		}
 		pay.Status = failedStatus
 		p := event.PaymentCompletedPayload{
-			PaymentID:  pay.ID,
-			OrderID:    pay.OrderID,
-			UserID:     pay.UserID,
-			Amount:     pay.Amount,
-			MethodID:   pay.MethodID,
-			ExternalID: pay.ExternalID,
-			Status:     string(pay.Status),
+			PaymentID:         pay.ID,
+			OrderID:           pay.OrderID,
+			UserID:            pay.UserID,
+			PaymentSum:        pay.Amount,
+			PaymentMethodID:   pay.MethodID,
+			PaymentExternalID: pay.ExternalID,
+			//Status:            string(pay.Status),
+		}
+		jsonPayload, err := json.Marshal(p)
+		if err != nil {
+			s.logger.Println("failed to marshal payload", "error", err)
+			return model.Payment{}, e, err
 		}
 		e = event.Event{
 			ID:      eventID,
 			Type:    event.PaymentFailed,
-			Payload: p,
+			Payload: jsonPayload,
 		}
 
 		return pay, e, nil
@@ -65,18 +72,23 @@ func (s *PaymentService) Process(ctx context.Context, payment model.Payment) (mo
 
 	pay.Status = completedStatus
 	p := event.PaymentCompletedPayload{
-		PaymentID:  pay.ID,
-		OrderID:    pay.OrderID,
-		UserID:     pay.UserID,
-		Amount:     pay.Amount,
-		MethodID:   pay.MethodID,
-		ExternalID: pay.ExternalID,
-		Status:     string(pay.Status),
+		PaymentID:         pay.ID,
+		OrderID:           pay.OrderID,
+		UserID:            pay.UserID,
+		PaymentSum:        pay.Amount,
+		PaymentMethodID:   pay.MethodID,
+		PaymentExternalID: pay.ExternalID,
+		//Status:            string(pay.Status),
+	}
+	jsonPayload, err := json.Marshal(p)
+	if err != nil {
+		s.logger.Println("failed to marshal payload", "error", err)
+		return model.Payment{}, e, err
 	}
 	e = event.Event{
 		ID:      eventID,
 		Type:    event.PaymentCompleted,
-		Payload: p,
+		Payload: jsonPayload,
 	}
 
 	return pay, e, nil

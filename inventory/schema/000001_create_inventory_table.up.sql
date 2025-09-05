@@ -7,6 +7,6 @@ CREATE TABLE inventory
     updated_at TIMESTAMP NOT NULL
 );
 
-INSERT INTO inventory (product_id, quantity, created_at, updated_at) VALUES ('product-1', 1000, NOW(), NOW());
-INSERT INTO inventory (product_id, quantity, created_at, updated_at) VALUES ('product-2', 2000, NOW(), NOW());
-INSERT INTO inventory (product_id, quantity, created_at, updated_at) VALUES ('product-3', 3000, NOW(), NOW());
+INSERT INTO inventory (product_id, quantity, created_at, updated_at) VALUES ('product-1', 10000, NOW(), NOW());
+INSERT INTO inventory (product_id, quantity, created_at, updated_at) VALUES ('product-2', 20000, NOW(), NOW());
+INSERT INTO inventory (product_id, quantity, created_at, updated_at) VALUES ('product-3', 30000, NOW(), NOW());
