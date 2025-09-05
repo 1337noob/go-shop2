@@ -59,3 +59,25 @@ go run order_saga/cmd/main.go
 ```
 
 http://localhost:8080/ui/clusters/local-kafka/all-topics?perPage=25
+
+
+user: product  
+password: product  
+jdbc:postgresql://localhost:5433/product  
+
+user: inventory  
+password: inventory  
+jdbc:postgresql://localhost:5434/inventory  
+
+user: payment  
+password: payment  
+jdbc:postgresql://localhost:5435/payment  
+
+user: order  
+password: order  
+jdbc:postgresql://localhost:5436/order  
+
+user: saga  
+password: saga  
+jdbc:postgresql://localhost:5437/saga  
+
