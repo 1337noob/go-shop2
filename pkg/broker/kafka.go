@@ -130,6 +130,7 @@ func (h *consumerGroupHandler) Cleanup(sarama.ConsumerGroupSession) error {
 
 func (h *consumerGroupHandler) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for message := range claim.Messages() {
+		h.broker.logger.Printf("Message claimed: value = %s, topic = %s, partition = %d, offset = %d", message.Value, message.Topic, message.Partition, message.Offset)
 		msg := Message{
 			Topic: message.Topic,
 			Key:   string(message.Key),

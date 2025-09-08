@@ -7,7 +7,6 @@ import (
 	"shop/payment/internal/model"
 	"shop/payment/internal/repository"
 	"shop/pkg/event"
-	"time"
 
 	"github.com/google/uuid"
 )
@@ -34,7 +33,7 @@ func (s *PaymentService) Process(ctx context.Context, payment model.Payment) (mo
 	}
 
 	// fake charge delay
-	time.Sleep(time.Second * 2)
+	//time.Sleep(time.Second * 2)
 
 	eventID := uuid.New().String()
 	completedStatus := model.PaymentStatusCompleted

@@ -6,13 +6,12 @@ import (
 	"log"
 	"os"
 	"shop/order_saga/internal/handler"
-	"shop/order_saga/internal/model"
 	"shop/order_saga/internal/orchestrator"
 	"shop/order_saga/internal/repository"
+	"shop/order_saga/internal/service"
 	"shop/pkg/broker"
 	"shop/pkg/inbox"
 	"shop/pkg/outbox"
-	"shop/pkg/types"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -20,7 +19,7 @@ import (
 )
 
 func main() {
-	//commandsTopic := "order-saga-commands"
+	commandsTopic := "order-saga-commands"
 	productEventTopic := "product-events"
 	inventoryEventTopic := "inventory-events"
 	orderEventTopic := "order-events"
@@ -44,7 +43,7 @@ func main() {
 
 	orderRepo := repository.NewPostgresSagaRepo()
 	orc := orchestrator.NewOrchestrator(orderRepo, out, logger)
-	//svc := service.NewOrderSagaService(orc, logger)
+	orderSagaService := service.NewOrderSagaService(orc, logger)
 
 	brokers := []string{"localhost:9093"}
 
@@ -84,12 +83,12 @@ func main() {
 		}
 	}()
 
-	// subscribe command handler
-	//commandHandler := handler.NewCommandHandler(db, svc, in, out, logger)
-	//err = br.Subscribe(commandsTopic, commandHandler)
-	//if err != nil {
-	//	logger.Fatalf("failed to subscribe to commands topic: %v", err)
-	//}
+	//subscribe command handler
+	commandHandler := handler.NewCommandHandler(db, orderSagaService, in, out, logger)
+	err = br.Subscribe(commandsTopic, commandHandler)
+	if err != nil {
+		logger.Fatalf("failed to subscribe to commands topic: %v", err)
+	}
 
 	// subscribe event handler
 	eventHandler := handler.NewEventHandler(db, orc, in, out, logger)
@@ -110,41 +109,41 @@ func main() {
 		logger.Fatalf("failed to subscribe to commands topic: %v", err)
 	}
 
-	tx, err := db.Begin()
-	if err != nil {
-		logger.Fatalf("failed to begin transaction: %v", err)
-	}
-	defer tx.Rollback()
-	ctxWithTx := context.WithValue(context.Background(), "tx", tx)
-
-	for i := 0; i < 100; i++ {
-		createOrderSaga := model.NewCreateOrderSaga(
-			"user-1",
-			[]types.Item{
-				{
-					ProductID: "product-1",
-					Quantity:  11,
-				},
-				{
-					ProductID: "product-2",
-					Quantity:  21,
-				},
-			},
-			"method-1",
-		)
-		err = orc.StartSaga(ctxWithTx, createOrderSaga)
-		if err != nil {
-			logger.Fatal("failed to start saga order", "error", err)
-			return
-		}
-	}
-	err = tx.Commit()
-	if err != nil {
-		logger.Fatal("failed to commit transaction", "error", err)
-	}
+	//tx, err := db.Begin()
+	//if err != nil {
+	//	logger.Fatalf("failed to begin transaction: %v", err)
+	//}
+	//defer tx.Rollback()
+	//ctxWithTx := context.WithValue(context.Background(), "tx", tx)
+	//
+	//for i := 0; i < 100; i++ {
+	//	createOrderSaga := model.NewCreateOrderSaga(
+	//		"user-1",
+	//		[]types.Item{
+	//			{
+	//				ProductID: "product-1",
+	//				Quantity:  11,
+	//			},
+	//			{
+	//				ProductID: "product-2",
+	//				Quantity:  21,
+	//			},
+	//		},
+	//		"method-1",
+	//	)
+	//	err = orc.StartSaga(ctxWithTx, createOrderSaga)
+	//	if err != nil {
+	//		logger.Fatal("failed to start saga order", "error", err)
+	//		return
+	//	}
+	//}
+	//err = tx.Commit()
+	//if err != nil {
+	//	logger.Fatal("failed to commit transaction", "error", err)
+	//}
 
 	br.StartConsume([]string{
-		//commandsTopic,
+		commandsTopic,
 		productEventTopic,
 		inventoryEventTopic,
 		orderEventTopic,

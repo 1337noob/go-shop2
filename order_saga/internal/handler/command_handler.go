@@ -101,9 +101,9 @@ func (h *CommandHandler) Handle(message broker.Message) error {
 	var e event.Event
 
 	switch cmd.Type {
-	case command.CreateOrder:
+	case command.SagaCreateOrder:
 		h.logger.Printf("Create order command: %+v", cmd)
-		e, err = h.handleCreateOrderSaga(ctxWithTx, cmd.Payload)
+		e, err = h.handleSagaCreateOrder(ctxWithTx, cmd.Payload)
 		if err != nil {
 			return err
 		}
@@ -142,47 +142,23 @@ func (h *CommandHandler) Handle(message broker.Message) error {
 	return nil
 }
 
-func (h *CommandHandler) handleCreateOrderSaga(ctx context.Context, jsonPayload json.RawMessage) (event.Event, error) {
+func (h *CommandHandler) handleSagaCreateOrder(ctx context.Context, jsonPayload json.RawMessage) (event.Event, error) {
 	h.logger.Printf("Handle create order: %+v", jsonPayload)
 	var e event.Event
 
-	//var payload command.CreateOrderPayload
-	//err := json.Unmarshal(jsonPayload, &payload)
-	//if err != nil {
-	//	h.logger.Printf("Error unmarshalling payload: %s", err)
-	//	return e, err
-	//}
-	//
-	//timeNow := time.Now()
-	//orderID := uuid.New().String()
-	//var items []model.OrderItem
-	//for _, item := range payload.OrderItems {
-	//	items = append(items, model.OrderItem{
-	//		ID:        uuid.New().String(),
-	//		OrderID:   orderID,
-	//		ProductID: item.ProductId,
-	//		Quantity:  item.Quantity,
-	//		CreatedAt: timeNow,
-	//		UpdatedAt: timeNow,
-	//	})
-	//}
-	//order := model.Order{
-	//	ID:              orderID,
-	//	UserID:          payload.UserID,
-	//	PaymentMethodID: payload.PaymentMethodID,
-	//	Phone:           payload.Phone,
-	//	Email:           payload.Email,
-	//	Status:          model.OrderStatusCreated,
-	//	OrderItems:           items,
-	//	CreatedAt:       timeNow,
-	//	UpdatedAt:       timeNow,
-	//}
-	//o, e, err := h.orderService.Store(ctx, order)
-	//if err != nil {
-	//	h.logger.Printf("Error storing order: %s", err)
-	//	return e, err
-	//}
-	//h.logger.Printf("Order stored with id: %s", o.ID)
+	var payload command.SagaCreateOrderPayload
+	err := json.Unmarshal(jsonPayload, &payload)
+	if err != nil {
+		h.logger.Printf("Error unmarshalling payload: %s", err)
+		return e, err
+	}
+
+	err = h.orderSagaService.Create(ctx, payload.UserID, payload.OrderItems, payload.PaymentMethodID)
+	if err != nil {
+		h.logger.Printf("Error storing order: %s", err)
+		return e, err
+	}
+	h.logger.Println("Create order saga created successfully")
 
 	return e, nil
 }
