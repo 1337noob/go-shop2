@@ -83,9 +83,29 @@ services:
     volumes:
       - saga-postgres:/var/lib/postgresql/data
 
+  gateway-db:
+    image: postgres
+    environment:
+      POSTGRES_USER: gateway
+      POSTGRES_PASSWORD: gateway
+      POSTGRES_DB: gateway
+    ports:
+      - "5438:5432"
+    volumes:
+      - gateway-postgres:/var/lib/postgresql/data
+
+  gateway-redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - gateway-redis:/data
+
 volumes:
   product-postgres:
   inventory-postgres:
   payment-postgres:
   order-postgres:
   saga-postgres:
+  gateway-postgres:
+  gateway-redis:

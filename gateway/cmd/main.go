@@ -1,10 +1,126 @@
 package main
 
 import (
+	"context"
+	"database/sql"
+	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"shop/gateway/internal/handler"
+	"shop/gateway/internal/middleware"
+	"shop/gateway/internal/repository"
+	"shop/pkg/broker"
+	"shop/pkg/outbox"
+	"time"
+
+	"github.com/IBM/sarama"
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 )
 
 func main() {
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	logger := log.New(os.Stdout, "[gateway] ", log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
+
+	db, err := sql.Open("postgres", "postgres://gateway:gateway@localhost:5438/gateway?sslmode=disable")
+	if err != nil {
+		logger.Fatal("failed to connect to database", "error", err)
+	}
+	defer db.Close()
+	err = db.Ping()
+	if err != nil {
+		logger.Fatal("failed to ping database", "error", err)
+	}
+	// Инициализация Redis
+	redisRepo, err := repository.NewRedisSessionRepository(
+		"localhost:6379",
+		"",
+		"session:",
+	)
+	if err != nil {
+		log.Fatalf("Failed to initialize Redis: %v", err)
+	}
+
+	userRepo := repository.NewPostgresUserRepository(db)
+
+	// Инициализация middleware сессий
+	sessionMiddleware := middleware.NewSessionMiddleware(
+		redisRepo,
+		"session_id",
+		60*time.Second, // TTL сессии
+	)
+
+	out := outbox.NewPostgresOutbox()
+
+	// Инициализация обработчиков
+	authHandler := handler.NewAuthHandler(db, sessionMiddleware, userRepo)
+	orderHandler := handler.NewOrderHandler(db, out, logger)
+
+	// Настройка роутера
+	router := mux.NewRouter()
+
+	// Public routes
+	router.HandleFunc("/api/login", authHandler.Login).Methods("POST")
+	router.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("OK"))
+	}).Methods("GET")
+
+	// Protected routes
+	protected := router.PathPrefix("/api").Subrouter()
+	protected.Use(sessionMiddleware.SessionRequired)
+
+	protected.HandleFunc("/logout", authHandler.Logout).Methods("POST")
+	protected.HandleFunc("/profile", authHandler.Profile).Methods("GET")
+
+	protected.HandleFunc("/orders", orderHandler.CreateOrder).Methods("POST")
+
+	// Optional session routes
+	optionalSession := router.PathPrefix("/api/public").Subrouter()
+	optionalSession.Use(sessionMiddleware.OptionalSession)
+
+	optionalSession.HandleFunc("/info", func(w http.ResponseWriter, r *http.Request) {
+		session := middleware.GetSessionFromContext(r.Context())
+		response := map[string]interface{}{
+			"authenticated": session != nil,
+			"user_id":       nil,
+		}
+		if session != nil {
+			response["user_id"] = session.UserID
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+	}).Methods("GET")
+
+	brokers := []string{"localhost:9093"}
+
+	config := sarama.NewConfig()
+	config.Producer.Return.Successes = true
+	config.Producer.Idempotent = true
+	config.Producer.RequiredAcks = sarama.WaitForAll
+	config.Net.MaxOpenRequests = 1
+	config.Producer.Transaction.ID = uuid.New().String()
+
+	// kafka producer
+	kafkaProducer, err := sarama.NewSyncProducer(brokers, config)
+	if err != nil {
+		logger.Fatalf("Ошибка при создании продюсера: %v", err)
+	}
+	defer kafkaProducer.Close()
+
+	br := broker.NewKafkaBroker(kafkaProducer, nil, logger)
+
+	// outbox worker
+	workerBatchSize := 100
+	workerInterval := 1 * time.Second
+	outboxWorker := outbox.NewWorker(db, br, out, logger, workerBatchSize, workerInterval)
+	go func() {
+		err := outboxWorker.Start(context.Background())
+		if err != nil {
+			logger.Printf("failed to start outbox worker: %v", err)
+		}
+	}()
+
+	log.Println("API Gateway started on :8081")
+	log.Fatal(http.ListenAndServe(":8081", router))
 }
