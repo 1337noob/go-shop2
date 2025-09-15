@@ -94,5 +94,5 @@ func (o *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		o.logger.Println("failed to commit transaction", "error", err)
 	}
 
-	o.logger.Println("CreateOrder handler finished")
+	o.logger.Println("CreateOrder handler finish")
 }

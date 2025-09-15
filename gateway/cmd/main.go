@@ -60,6 +60,7 @@ func main() {
 	router := mux.NewRouter()
 
 	// Public routes
+	router.HandleFunc("/api/register", authHandler.Register).Methods("POST")
 	router.HandleFunc("/api/login", authHandler.Login).Methods("POST")
 	router.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
