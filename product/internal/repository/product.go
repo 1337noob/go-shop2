@@ -10,6 +10,7 @@ import (
 type ProductRepository interface {
 	Create(ctx context.Context, product model.Product) (model.Product, error)
 	FindById(ctx context.Context, id string) (model.Product, error)
+	GetByCategoryId(ctx context.Context, categoryId string, page int, limit int) ([]model.Product, error)
 }
 
 type PostgresProductRepository struct{}
@@ -45,4 +46,31 @@ func (p *PostgresProductRepository) FindById(ctx context.Context, id string) (mo
 	}
 
 	return product, nil
+}
+
+func (p *PostgresProductRepository) GetByCategoryId(ctx context.Context, categoryId string, page int, limit int) ([]model.Product, error) {
+	tx, ok := ctx.Value("tx").(*sql.Tx)
+	if !ok {
+		return nil, errors.New("transaction not found in context")
+	}
+
+	var products []model.Product
+	offset := (page - 1) * limit
+	query := `SELECT id, name, price, category_id, created_at  FROM products WHERE category_id = $1 ORDER BY created_at DESC OFFSET $2 LIMIT $3`
+	rows, err := tx.QueryContext(ctx, query, categoryId, offset, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var prod model.Product
+		err = rows.Scan(&prod.ID, &prod.Name, &prod.Price, &prod.CategoryID, &prod.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		products = append(products, prod)
+	}
+
+	return products, nil
 }

@@ -7,9 +7,9 @@ import (
 	"log"
 	"net/http"
 	"shop/gateway/internal/middleware"
-	"shop/gateway/proto"
 	"shop/pkg/command"
 	"shop/pkg/outbox"
+	"shop/pkg/proto"
 	"shop/pkg/types"
 	"time"
 

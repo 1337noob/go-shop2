@@ -9,9 +9,9 @@ import (
 	"shop/gateway/internal/handler"
 	"shop/gateway/internal/middleware"
 	"shop/gateway/internal/repository"
-	"shop/gateway/proto"
 	"shop/pkg/broker"
 	"shop/pkg/outbox"
+	"shop/pkg/proto"
 	"time"
 
 	"github.com/IBM/sarama"
@@ -63,27 +63,41 @@ func main() {
 	defer orderHistoryConn.Close()
 	orderHistoryClient := proto.NewOrderHistoryServiceClient(orderHistoryConn)
 
+	productConn, err := grpc.NewClient(
+		"localhost:50051",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	defer productConn.Close()
+	productClient := proto.NewProductServiceClient(productConn)
+
 	authHandler := handler.NewAuthHandler(db, sessionMiddleware, userRepo)
 	orderHandler := handler.NewOrderHandler(db, out, orderHistoryClient, logger)
+	productHandler := handler.NewProductHandler(db, out, productClient, logger)
 
 	router := mux.NewRouter()
 
 	// Public
-	router.HandleFunc("/api/register", authHandler.Register).Methods("POST")
-	router.HandleFunc("/api/login", authHandler.Login).Methods("POST")
-	router.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/auth/register", authHandler.Register).Methods("POST")
+	router.HandleFunc("/auth/login", authHandler.Login).Methods("POST")
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	}).Methods("GET")
 
+	router.HandleFunc("/api/categories", productHandler.GetCategories).Methods("GET")
+	router.HandleFunc("/api/products", productHandler.GetProducts).Methods("GET")
+
 	// Protected
-	protected := router.PathPrefix("/api").Subrouter()
+	protected := router.PathPrefix("").Subrouter()
 	protected.Use(sessionMiddleware.SessionRequired)
 
-	protected.HandleFunc("/logout", authHandler.Logout).Methods("POST")
-	protected.HandleFunc("/profile", authHandler.Profile).Methods("GET")
+	protected.HandleFunc("/auth/logout", authHandler.Logout).Methods("POST")
+	protected.HandleFunc("/auth/profile", authHandler.Profile).Methods("GET")
 
-	protected.HandleFunc("/orders", orderHandler.CreateOrder).Methods("POST")
-	protected.HandleFunc("/my-orders", orderHandler.GetMyOrders).Methods("GET")
+	protected.HandleFunc("/api/orders", orderHandler.CreateOrder).Methods("POST")
+	protected.HandleFunc("/api/my-orders", orderHandler.GetMyOrders).Methods("GET")
 
 	brokers := []string{"localhost:9093"}
 

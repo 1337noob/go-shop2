@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"log"
 	"shop/order_history/internal/repository"
-	"shop/order_history/proto"
+	"shop/pkg/proto"
 )
 
 type GrpcHandler struct {
@@ -57,7 +57,7 @@ func (h *GrpcHandler) GetOrders(ctx context.Context, in *proto.GetOrdersRequest)
 			PaymentSum:        int64(order.PaymentSum),
 			PaymentExternalId: order.PaymentExternalID,
 			PaymentStatus:     order.PaymentStatus,
-			Status:            order.PaymentStatus,
+			Status:            string(order.Status),
 			CreatedAt:         order.CreatedAt.String(),
 			UpdatedAt:         order.UpdatedAt.String(),
 		})

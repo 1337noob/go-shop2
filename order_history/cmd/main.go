@@ -7,9 +7,9 @@ import (
 	"os"
 	"shop/order_history/internal/handler"
 	"shop/order_history/internal/repository"
-	"shop/order_history/proto"
 	"shop/pkg/broker"
 	"shop/pkg/inbox"
+	"shop/pkg/proto"
 
 	"github.com/IBM/sarama"
 	"github.com/google/uuid"
@@ -92,7 +92,7 @@ func main() {
 	proto.RegisterOrderHistoryServiceServer(srv, svc)
 	logger.Println("gRPC server registered")
 
-	if err := srv.Serve(lis); err != nil {
+	if err = srv.Serve(lis); err != nil {
 		logger.Fatalf("Failed to serve: %v", err)
 	}
 

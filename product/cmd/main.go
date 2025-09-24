@@ -3,18 +3,23 @@ package main
 import (
 	"context"
 	"database/sql"
-	"github.com/IBM/sarama"
-	"github.com/google/uuid"
-	_ "github.com/lib/pq"
 	"log"
+	"net"
 	"os"
 	"shop/pkg/broker"
 	"shop/pkg/inbox"
 	"shop/pkg/outbox"
+	"shop/pkg/proto"
 	"shop/product/internal/handler"
 	"shop/product/internal/repository"
 	"shop/product/internal/service"
 	"time"
+
+	"github.com/IBM/sarama"
+	"github.com/google/uuid"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	//_ "github.com/lib/pq"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -22,7 +27,7 @@ func main() {
 
 	logger := log.New(os.Stdout, "[product] ", log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
 
-	db, err := sql.Open("postgres", "postgres://product:product@localhost:5433/product?sslmode=disable")
+	db, err := sql.Open("pgx", "postgres://product:product@localhost:5433/product?sslmode=disable")
 	if err != nil {
 		logger.Fatal("failed to connect to database", "error", err)
 	}
@@ -36,7 +41,7 @@ func main() {
 
 	o := outbox.NewPostgresOutbox()
 
-	catRepo := repository.NewPostgresCategoryRepository()
+	catRepo := repository.NewPostgresCategoryRepository(db)
 	catService := service.NewCategoryService(catRepo, logger)
 
 	prodRepo := repository.NewPostgresProductRepository()
@@ -88,7 +93,22 @@ func main() {
 		logger.Fatalf("failed to subscribe to commands topic: %v", err)
 	}
 
-	br.StartConsume([]string{commandsTopic})
+	go br.StartConsume([]string{commandsTopic})
+
+	svc := handler.NewGrpcHandler(db, catRepo, prodRepo, logger)
+	lis, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		logger.Fatalf("Failed to listen: %v", err)
+	}
+	logger.Println("Server is listening on :50051")
+
+	srv := grpc.NewServer()
+	proto.RegisterProductServiceServer(srv, svc)
+	logger.Println("gRPC server registered")
+
+	if err = srv.Serve(lis); err != nil {
+		logger.Fatalf("Failed to serve: %v", err)
+	}
 
 	select {}
 }
