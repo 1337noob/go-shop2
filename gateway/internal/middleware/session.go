@@ -38,46 +38,19 @@ func (m *SessionMiddleware) SessionRequired(next http.Handler) http.Handler {
 			return
 		}
 
-		// Обновляем время активности
 		session.LastActivity = time.Now()
-		session.ExpiresAt = time.Now().Add(m.sessionTTL)
 
 		if err := m.repo.UpdateSession(r.Context(), session); err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 
-		// Добавляем сессию в контекст
 		ctx := context.WithValue(r.Context(), "session", session)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func (m *SessionMiddleware) OptionalSession(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		session, err := m.getSessionFromRequest(r)
-		if err == nil && session != nil && session.IsValid() {
-			// Обновляем сессию если она валидна
-			session.LastActivity = time.Now()
-			session.ExpiresAt = time.Now().Add(m.sessionTTL)
-			m.repo.UpdateSession(r.Context(), session)
-
-			ctx := context.WithValue(r.Context(), "session", session)
-			r = r.WithContext(ctx)
-		}
-
-		next.ServeHTTP(w, r)
-	})
-}
-
 func (m *SessionMiddleware) getSessionFromRequest(r *http.Request) (*model.Session, error) {
-	// Пробуем получить сессию из cookie
-	cookie, err := r.Cookie(m.sessionName)
-	if err == nil && cookie.Value != "" {
-		return m.repo.GetSession(r.Context(), cookie.Value)
-	}
-
-	// Пробуем получить сессию из заголовка Authorization
 	authHeader := r.Header.Get("Authorization")
 	if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
 		sessionID := strings.TrimPrefix(authHeader, "Bearer ")
@@ -104,17 +77,6 @@ func (m *SessionMiddleware) CreateSession(w http.ResponseWriter, r *http.Request
 		return nil, err
 	}
 
-	// Устанавливаем cookie
-	http.SetCookie(w, &http.Cookie{
-		Name:     m.sessionName,
-		Value:    sessionID,
-		Path:     "/",
-		Expires:  session.ExpiresAt,
-		HttpOnly: true,
-		Secure:   true, // Только для HTTPS в production
-		SameSite: http.SameSiteStrictMode,
-	})
-
 	return session, nil
 }
 
@@ -129,15 +91,6 @@ func (m *SessionMiddleware) DestroySession(w http.ResponseWriter, r *http.Reques
 			return err
 		}
 	}
-
-	// Удаляем cookie
-	http.SetCookie(w, &http.Cookie{
-		Name:     m.sessionName,
-		Value:    "",
-		Path:     "/",
-		Expires:  time.Now().Add(-time.Hour),
-		HttpOnly: true,
-	})
 
 	return nil
 }

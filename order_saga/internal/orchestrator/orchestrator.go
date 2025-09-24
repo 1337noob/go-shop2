@@ -314,6 +314,8 @@ func (o *Orchestrator) updatePayload(sagaPayload types.SagaPayload, e event.Even
 		if err != nil {
 			return types.SagaPayload{}, err
 		}
+		paymentSum := 0
+		o.logger.Println("Payment sum: ", paymentSum)
 		for i, item := range sagaPayload.OrderItems {
 			for _, eItem := range eventPayload.OrderItems {
 				if item.ProductID == eItem.ProductID {
@@ -323,10 +325,13 @@ func (o *Orchestrator) updatePayload(sagaPayload types.SagaPayload, e event.Even
 					sagaPayload.OrderItems[i].Price = eItem.Price
 					sagaPayload.OrderItems[i].Name = eItem.Name
 					//sagaPayload.OrderItems[i].Quantity = item.Quantity
+					paymentSum += eItem.Price * item.Quantity
 					break
 				}
 			}
 		}
+		sagaPayload.PaymentSum = paymentSum
+
 	case event.ProductsValidationFailed:
 
 	case event.InventoryReserved:
@@ -379,6 +384,7 @@ func (o *Orchestrator) mapToJsonPayload(commandType command.Type, payload types.
 		}
 	case command.ValidateProducts:
 		newPayload := command.ValidateProductsPayload{
+			OrderID:    payload.OrderID,
 			OrderItems: payload.OrderItems,
 		}
 		result, err = json.Marshal(newPayload)
@@ -387,6 +393,7 @@ func (o *Orchestrator) mapToJsonPayload(commandType command.Type, payload types.
 		}
 	case command.ReserveInventory:
 		newPayload := command.ReserveInventoryPayload{
+			OrderID:    payload.OrderID,
 			OrderItems: payload.OrderItems,
 		}
 		result, err = json.Marshal(newPayload)
@@ -414,6 +421,7 @@ func (o *Orchestrator) mapToJsonPayload(commandType command.Type, payload types.
 		}
 	case command.ReleaseInventory:
 		newPayload := command.ReleaseInventoryPayload{
+			OrderID:    payload.OrderID,
 			OrderItems: payload.OrderItems,
 		}
 		result, err = json.Marshal(newPayload)

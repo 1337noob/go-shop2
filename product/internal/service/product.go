@@ -22,7 +22,7 @@ func NewProductService(repo repository.ProductRepository, logger *log.Logger) *P
 	return &ProductService{repo: repo, logger: logger}
 }
 
-func (s *ProductService) ValidateProductsByIds(ctx context.Context, items []types.Item) (event.Event, error) {
+func (s *ProductService) ValidateProductsByIds(ctx context.Context, items []types.Item, orderID string) (event.Event, error) {
 	var e event.Event
 	var validatedItems []types.Item
 
@@ -60,6 +60,7 @@ func (s *ProductService) ValidateProductsByIds(ctx context.Context, items []type
 	}
 
 	p := event.ProductsValidatedPayload{
+		OrderID:    orderID,
 		OrderItems: validatedItems,
 	}
 	jsonPayload, err := json.Marshal(p)

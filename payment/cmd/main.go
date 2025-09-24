@@ -3,9 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"github.com/IBM/sarama"
-	"github.com/google/uuid"
-	_ "github.com/lib/pq"
 	"log"
 	"os"
 	"shop/payment/internal/handler"
@@ -15,6 +12,10 @@ import (
 	"shop/pkg/inbox"
 	"shop/pkg/outbox"
 	"time"
+
+	"github.com/IBM/sarama"
+	"github.com/google/uuid"
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -40,7 +41,7 @@ func main() {
 	methodService := service.NewMethodService(methodRepo, logger)
 
 	paymentRepo := repository.NewPostgresPaymentRepository()
-	paymentService := service.NewPaymentService(paymentRepo, logger)
+	paymentService := service.NewPaymentService(paymentRepo, methodRepo, logger)
 
 	brokers := []string{"localhost:9093"}
 

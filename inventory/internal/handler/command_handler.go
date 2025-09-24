@@ -167,7 +167,7 @@ func (h *CommandHandler) handleReserve(ctx context.Context, cmd command.Command)
 		})
 	}
 
-	e, err = h.inventoryService.Reserve(ctx, cmd.SagaID, items)
+	e, err = h.inventoryService.Reserve(ctx, cmd.SagaID, items, payload.OrderID)
 	if err != nil {
 		h.logger.Printf("Error reserve inventory: %s", err)
 		return e, err
@@ -195,7 +195,7 @@ func (h *CommandHandler) handleRelease(ctx context.Context, cmd command.Command)
 		})
 	}
 
-	e, err = h.inventoryService.Release(ctx, cmd.SagaID, items)
+	e, err = h.inventoryService.Release(ctx, cmd.SagaID, items, payload.OrderID)
 	if err != nil {
 		h.logger.Printf("Error release inventory: %s", err)
 		return e, err

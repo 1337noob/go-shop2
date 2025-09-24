@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 	"shop/gateway/internal/handler"
 	"shop/gateway/internal/middleware"
 	"shop/gateway/internal/repository"
+	"shop/gateway/proto"
 	"shop/pkg/broker"
 	"shop/pkg/outbox"
 	"time"
@@ -17,6 +17,8 @@ import (
 	"github.com/IBM/sarama"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func main() {
@@ -43,30 +45,37 @@ func main() {
 
 	userRepo := repository.NewPostgresUserRepository(db)
 
-	// Инициализация middleware сессий
 	sessionMiddleware := middleware.NewSessionMiddleware(
 		redisRepo,
 		"session_id",
-		60*time.Second, // TTL сессии
+		time.Second*60,
 	)
 
 	out := outbox.NewPostgresOutbox()
 
-	// Инициализация обработчиков
-	authHandler := handler.NewAuthHandler(db, sessionMiddleware, userRepo)
-	orderHandler := handler.NewOrderHandler(db, out, logger)
+	orderHistoryConn, err := grpc.NewClient(
+		"localhost:50052",
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	defer orderHistoryConn.Close()
+	orderHistoryClient := proto.NewOrderHistoryServiceClient(orderHistoryConn)
 
-	// Настройка роутера
+	authHandler := handler.NewAuthHandler(db, sessionMiddleware, userRepo)
+	orderHandler := handler.NewOrderHandler(db, out, orderHistoryClient, logger)
+
 	router := mux.NewRouter()
 
-	// Public routes
+	// Public
 	router.HandleFunc("/api/register", authHandler.Register).Methods("POST")
 	router.HandleFunc("/api/login", authHandler.Login).Methods("POST")
 	router.HandleFunc("/api/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	}).Methods("GET")
 
-	// Protected routes
+	// Protected
 	protected := router.PathPrefix("/api").Subrouter()
 	protected.Use(sessionMiddleware.SessionRequired)
 
@@ -74,24 +83,7 @@ func main() {
 	protected.HandleFunc("/profile", authHandler.Profile).Methods("GET")
 
 	protected.HandleFunc("/orders", orderHandler.CreateOrder).Methods("POST")
-
-	// Optional session routes
-	optionalSession := router.PathPrefix("/api/public").Subrouter()
-	optionalSession.Use(sessionMiddleware.OptionalSession)
-
-	optionalSession.HandleFunc("/info", func(w http.ResponseWriter, r *http.Request) {
-		session := middleware.GetSessionFromContext(r.Context())
-		response := map[string]interface{}{
-			"authenticated": session != nil,
-			"user_id":       nil,
-		}
-		if session != nil {
-			response["user_id"] = session.UserID
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
-	}).Methods("GET")
+	protected.HandleFunc("/my-orders", orderHandler.GetMyOrders).Methods("GET")
 
 	brokers := []string{"localhost:9093"}
 

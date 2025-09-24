@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"shop/gateway/internal/middleware"
@@ -60,21 +60,13 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println(req)
 
-	tx, err := h.db.Begin()
-	if err != nil {
-		log.Println("Failed to begin transaction", "error", err)
-		http.Error(w, "Failed to begin transaction", http.StatusInternalServerError)
-		return
-	}
-	defer tx.Rollback()
-
-	ctxWithTx := context.WithValue(r.Context(), "tx", tx)
-
-	existUser, err := h.userRepo.FindUserByEmail(ctxWithTx, req.Email)
+	existUser, err := h.userRepo.FindUserByEmail(r.Context(), req.Email)
 	if err != nil {
 		log.Println("Failed to find user by email", "error", err)
-		http.Error(w, "Failed to find user by email", http.StatusInternalServerError)
-		return
+		if !errors.Is(err, sql.ErrNoRows) {
+			http.Error(w, "Failed to find user by email", http.StatusInternalServerError)
+			return
+		}
 	}
 	if existUser != nil {
 		log.Println("User already exists")
@@ -90,7 +82,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		Password: string(hashedPassword),
 	}
 
-	err = h.userRepo.CreateUser(ctxWithTx, newUser)
+	err = h.userRepo.CreateUser(r.Context(), newUser)
 	if err != nil {
 		log.Println("Failed to create user", "error", err)
 		http.Error(w, "Failed to create user", http.StatusInternalServerError)
@@ -101,13 +93,6 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		Success: true,
 		Message: "Registration successful",
 		UserID:  newUser.ID,
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		log.Println("failed to commit transaction", "error", err)
-		http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
-		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -122,17 +107,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println(req)
 
-	// Здесь должна быть реальная проверка учетных данных
-	tx, err := h.db.Begin()
-	if err != nil {
-		log.Println("Failed to begin transaction", "error", err)
-		http.Error(w, "Failed to begin transaction", http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
-
-	ctxWithTx := context.WithValue(r.Context(), "tx", tx)
-
-	user, err := h.userRepo.FindUserByEmail(ctxWithTx, req.Email)
+	user, err := h.userRepo.FindUserByEmail(r.Context(), req.Email)
 	if err != nil {
 		log.Println("Failed to find user by email", "error", err)
 		response := LoginResponse{
@@ -158,7 +133,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Создаем сессию
 	session, err := h.sessionMiddleware.CreateSession(w, r, user.ID)
 	if err != nil {
 		http.Error(w, "Failed to create session", http.StatusInternalServerError)
@@ -170,12 +144,6 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Message:   "Login successful",
 		UserID:    session.UserID,
 		SessionID: session.ID,
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		log.Println("failed to commit transaction", "error", err)
-		http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -204,16 +172,7 @@ func (h *AuthHandler) Profile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tx, err := h.db.Begin()
-	if err != nil {
-		log.Println("Failed to begin transaction", "error", err)
-		http.Error(w, "Failed to begin transaction", http.StatusInternalServerError)
-	}
-	defer tx.Rollback()
-
-	ctxWithTx := context.WithValue(r.Context(), "tx", tx)
-
-	user, err := h.userRepo.FindUserByID(ctxWithTx, session.UserID)
+	user, err := h.userRepo.FindUserByID(r.Context(), session.UserID)
 	if err != nil {
 		http.Error(w, "Failed to find user", http.StatusInternalServerError)
 		return
@@ -224,12 +183,6 @@ func (h *AuthHandler) Profile(w http.ResponseWriter, r *http.Request) {
 		"name":      user.Name,
 		"email":     user.Email,
 		"logged_in": session.CreatedAt,
-	}
-
-	err = tx.Commit()
-	if err != nil {
-		log.Println("failed to commit transaction", "error", err)
-		http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

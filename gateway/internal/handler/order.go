@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"shop/gateway/internal/middleware"
+	"shop/gateway/proto"
 	"shop/pkg/command"
 	"shop/pkg/outbox"
 	"shop/pkg/types"
@@ -16,22 +17,29 @@ import (
 )
 
 type OrderHandler struct {
-	db     *sql.DB
-	outbox outbox.Outbox
-	logger *log.Logger
+	db                        *sql.DB
+	outbox                    outbox.Outbox
+	orderHistoryServiceClient proto.OrderHistoryServiceClient
+	logger                    *log.Logger
 }
 
-func NewOrderHandler(db *sql.DB, outbox outbox.Outbox, logger *log.Logger) *OrderHandler {
+func NewOrderHandler(db *sql.DB, outbox outbox.Outbox, orderHistoryServiceClient proto.OrderHistoryServiceClient, logger *log.Logger) *OrderHandler {
 	return &OrderHandler{
-		db:     db,
-		outbox: outbox,
-		logger: logger,
+		db:                        db,
+		outbox:                    outbox,
+		orderHistoryServiceClient: orderHistoryServiceClient,
+		logger:                    logger,
 	}
 }
 
 type CreateOrderRequest struct {
 	PaymentMethodID string       `json:"payment_method_id"`
 	OrderItems      []types.Item `json:"order_items"`
+}
+
+type GetMyOrdersRequest struct {
+	Page  int `json:"page"`
+	Limit int `json:"limit"`
 }
 
 func (o *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
@@ -94,5 +102,47 @@ func (o *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 		o.logger.Println("failed to commit transaction", "error", err)
 	}
 
+	response := map[string]interface{}{
+		"success": true,
+		"message": "Order created",
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+
 	o.logger.Println("CreateOrder handler finish")
+}
+
+func (o *OrderHandler) GetMyOrders(w http.ResponseWriter, r *http.Request) {
+	o.logger.Println("GetOrdersByUserID handler start")
+
+	session := middleware.GetSessionFromContext(r.Context())
+	if session == nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	var req GetMyOrdersRequest
+
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+	grpcRequest := proto.GetOrdersRequest{
+		UserId: session.UserID,
+		Page:   int64(req.Page),
+		Limit:  int64(req.Limit),
+	}
+
+	orders, err := o.orderHistoryServiceClient.GetOrders(r.Context(), &grpcRequest)
+	if err != nil {
+		o.logger.Println("Failed to get orders from grpc", "error", err)
+		http.Error(w, "Failed to get orders from grpc", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(orders)
+
+	o.logger.Println("GetOrdersByUserID handler finish")
 }

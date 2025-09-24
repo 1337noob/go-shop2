@@ -13,12 +13,14 @@ import (
 
 type PaymentService struct {
 	paymentRepo repository.PaymentRepository
+	methodRepo  repository.MethodRepository
 	logger      *log.Logger
 }
 
-func NewPaymentService(paymentRepo repository.PaymentRepository, logger *log.Logger) *PaymentService {
+func NewPaymentService(paymentRepo repository.PaymentRepository, methodRepo repository.MethodRepository, logger *log.Logger) *PaymentService {
 	return &PaymentService{
 		paymentRepo: paymentRepo,
+		methodRepo:  methodRepo,
 		logger:      logger,
 	}
 }
@@ -32,9 +34,16 @@ func (s *PaymentService) Process(ctx context.Context, payment model.Payment) (mo
 		return model.Payment{}, e, err
 	}
 
+	method, err := s.methodRepo.FindByID(ctx, pay.MethodID)
+	if err != nil {
+		s.logger.Printf("Find Payment Method Failed: %v", err)
+		return model.Payment{}, e, err
+	}
+
 	// fake charge delay
 	//time.Sleep(time.Second * 2)
 
+	fakeExternalID := uuid.New().String()
 	eventID := uuid.New().String()
 	completedStatus := model.PaymentStatusCompleted
 	failedStatus := model.PaymentStatusFailed
@@ -52,8 +61,8 @@ func (s *PaymentService) Process(ctx context.Context, payment model.Payment) (mo
 			UserID:            pay.UserID,
 			PaymentSum:        pay.Amount,
 			PaymentMethodID:   pay.MethodID,
-			PaymentExternalID: pay.ExternalID,
-			//Status:            string(pay.Status),
+			PaymentExternalID: fakeExternalID,
+			PaymentStatus:     string(pay.Status),
 		}
 		jsonPayload, err := json.Marshal(p)
 		if err != nil {
@@ -69,6 +78,11 @@ func (s *PaymentService) Process(ctx context.Context, payment model.Payment) (mo
 		return pay, e, nil
 	}
 
+	err = s.paymentRepo.UpdateStatus(ctx, pay.ID, completedStatus)
+	if err != nil {
+		s.logger.Printf("Update Payment Failed: %v", err)
+		return model.Payment{}, e, err
+	}
 	pay.Status = completedStatus
 	p := event.PaymentCompletedPayload{
 		PaymentID:         pay.ID,
@@ -76,8 +90,10 @@ func (s *PaymentService) Process(ctx context.Context, payment model.Payment) (mo
 		UserID:            pay.UserID,
 		PaymentSum:        pay.Amount,
 		PaymentMethodID:   pay.MethodID,
-		PaymentExternalID: pay.ExternalID,
-		//Status:            string(pay.Status),
+		PaymentExternalID: fakeExternalID,
+		PaymentType:       method.PaymentType,
+		PaymentGateway:    method.Gateway,
+		PaymentStatus:     string(pay.Status),
 	}
 	jsonPayload, err := json.Marshal(p)
 	if err != nil {

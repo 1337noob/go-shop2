@@ -157,7 +157,7 @@ func (h *CommandHandler) handleValidateProducts(ctx context.Context, jsonPayload
 		return e, err
 	}
 
-	e, err = h.productService.ValidateProductsByIds(ctx, payload.OrderItems)
+	e, err = h.productService.ValidateProductsByIds(ctx, payload.OrderItems, payload.OrderID)
 	if err != nil {
 		h.logger.Printf("Failed to validate products: %s", err)
 		return e, err

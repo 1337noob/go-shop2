@@ -3,10 +3,10 @@ package model
 type PaymentStatus string
 
 const (
-	PaymentStatusPending   PaymentStatus = "PENDING"
-	PaymentStatusCompleted PaymentStatus = "COMPLETED"
-	PaymentStatusFailed    PaymentStatus = "FAILED"
-	PaymentStatusRefunded  PaymentStatus = "REFUNDED"
+	PaymentStatusPending   PaymentStatus = "pending"
+	PaymentStatusCompleted PaymentStatus = "completed"
+	PaymentStatusFailed    PaymentStatus = "failed"
+	PaymentStatusRefunded  PaymentStatus = "refunded"
 )
 
 type Payment struct {

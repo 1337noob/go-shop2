@@ -21,7 +21,7 @@ func NewInventoryService(repo repository.InventoryRepository, logger *log.Logger
 	return &InventoryService{repo: repo, logger: logger}
 }
 
-func (s *InventoryService) Reserve(ctx context.Context, sagaID string, items []model.Item) (event.Event, error) {
+func (s *InventoryService) Reserve(ctx context.Context, sagaID string, items []model.Item, orderID string) (event.Event, error) {
 	var e event.Event
 
 	err := s.repo.Reserve(ctx, items)
@@ -40,6 +40,7 @@ func (s *InventoryService) Reserve(ctx context.Context, sagaID string, items []m
 		// TODO event InventoryReserveFailed
 
 		payload := event.InventoryReserveFailedPayload{
+			OrderID:    orderID,
 			OrderItems: eventItems,
 			Error:      err.Error(),
 		}
@@ -58,6 +59,7 @@ func (s *InventoryService) Reserve(ctx context.Context, sagaID string, items []m
 	}
 
 	payload := event.InventoryReservedPayload{
+		OrderID:    orderID,
 		OrderItems: eventItems,
 	}
 	jsonPayload, err := json.Marshal(payload)
@@ -75,7 +77,7 @@ func (s *InventoryService) Reserve(ctx context.Context, sagaID string, items []m
 	return e, nil
 }
 
-func (s *InventoryService) Release(ctx context.Context, sagaID string, items []model.Item) (event.Event, error) {
+func (s *InventoryService) Release(ctx context.Context, sagaID string, items []model.Item, orderID string) (event.Event, error) {
 	var e event.Event
 
 	err := s.repo.Release(ctx, items)
@@ -94,6 +96,7 @@ func (s *InventoryService) Release(ctx context.Context, sagaID string, items []m
 		s.logger.Println("failed to release inventory", "error", err)
 		// TODO event InventoryReleaseFailed
 		payload := event.InventoryReleaseFailedPayload{
+			OrderID:    orderID,
 			OrderItems: eventItems,
 			Error:      err.Error(),
 		}
@@ -112,6 +115,7 @@ func (s *InventoryService) Release(ctx context.Context, sagaID string, items []m
 	}
 
 	payload := event.InventoryReleasedPayload{
+		OrderID:    orderID,
 		OrderItems: eventItems,
 	}
 	jsonPayload, err := json.Marshal(payload)
