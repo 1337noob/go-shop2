@@ -16,6 +16,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/google/uuid"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {
@@ -27,7 +28,7 @@ func main() {
 
 	logger := log.New(os.Stdout, "[order-saga] ", log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
 
-	db, err := sql.Open("postgres", "postgres://saga:saga@localhost:5437/saga?sslmode=disable")
+	db, err := sql.Open("pgx", "postgres://saga:saga@localhost:5437/saga?sslmode=disable")
 	if err != nil {
 		logger.Fatal("failed to connect to database", "error", err)
 	}
@@ -108,39 +109,6 @@ func main() {
 	if err != nil {
 		logger.Fatalf("failed to subscribe to commands topic: %v", err)
 	}
-
-	//tx, err := db.Begin()
-	//if err != nil {
-	//	logger.Fatalf("failed to begin transaction: %v", err)
-	//}
-	//defer tx.Rollback()
-	//ctxWithTx := context.WithValue(context.Background(), "tx", tx)
-	//
-	//for i := 0; i < 100; i++ {
-	//	createOrderSaga := model.NewCreateOrderSaga(
-	//		"user-1",
-	//		[]types.Item{
-	//			{
-	//				ProductID: "product-1",
-	//				Quantity:  11,
-	//			},
-	//			{
-	//				ProductID: "product-2",
-	//				Quantity:  21,
-	//			},
-	//		},
-	//		"method-1",
-	//	)
-	//	err = orc.StartSaga(ctxWithTx, createOrderSaga)
-	//	if err != nil {
-	//		logger.Fatal("failed to start saga order", "error", err)
-	//		return
-	//	}
-	//}
-	//err = tx.Commit()
-	//if err != nil {
-	//	logger.Fatal("failed to commit transaction", "error", err)
-	//}
 
 	br.StartConsume([]string{
 		commandsTopic,

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"github.com/lib/pq"
 	"log"
 )
 
@@ -92,7 +91,7 @@ func (o *PostgresOutbox) batchUpdateStatus(ctx context.Context, ids []string, fr
 		return errors.New("transaction not found in context")
 	}
 	query := "UPDATE outbox SET status = $1 WHERE id = ANY($2) AND status = $3"
-	r, err := tx.ExecContext(ctx, query, to, pq.Array(ids), from)
+	r, err := tx.ExecContext(ctx, query, to, ids, from)
 	if err != nil {
 		log.Println("failed to update status value", "error", err)
 		return err

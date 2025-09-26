@@ -9,12 +9,9 @@ import (
 	"shop/order_saga/internal/service"
 	"shop/pkg/broker"
 	"shop/pkg/command"
-	"shop/pkg/event"
 	"shop/pkg/inbox"
 	"shop/pkg/outbox"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 type CommandHandler struct {
@@ -98,33 +95,15 @@ func (h *CommandHandler) Handle(message broker.Message) error {
 
 	ctxWithTx = context.WithValue(context.Background(), "tx", tx)
 
-	var e event.Event
-
 	switch cmd.Type {
 	case command.SagaCreateOrder:
 		h.logger.Printf("Create order command: %+v", cmd)
-		e, err = h.handleSagaCreateOrder(ctxWithTx, cmd.Payload)
+		err = h.handleSagaCreateOrder(ctxWithTx, cmd.Payload)
 		if err != nil {
 			return err
 		}
 	default:
 		return errors.New("invalid command")
-	}
-
-	e.SagaID = cmd.SagaID
-
-	outboxMessage := outbox.Message{
-		ID:        uuid.New().String(),
-		Topic:     "order-events",
-		Key:       cmd.SagaID,
-		Payload:   e,
-		Status:    outbox.StatusInit,
-		CreatedAt: time.Now(),
-	}
-	err = h.outbox.Publish(ctxWithTx, outboxMessage)
-	if err != nil {
-		h.logger.Println("failed to publish outbox message", "error", err)
-		return err
 	}
 
 	err = h.inbox.MarkAsCompleted(ctxWithTx, cmd.ID)
@@ -142,23 +121,22 @@ func (h *CommandHandler) Handle(message broker.Message) error {
 	return nil
 }
 
-func (h *CommandHandler) handleSagaCreateOrder(ctx context.Context, jsonPayload json.RawMessage) (event.Event, error) {
+func (h *CommandHandler) handleSagaCreateOrder(ctx context.Context, jsonPayload json.RawMessage) error {
 	h.logger.Printf("Handle create order: %+v", jsonPayload)
-	var e event.Event
 
 	var payload command.SagaCreateOrderPayload
 	err := json.Unmarshal(jsonPayload, &payload)
 	if err != nil {
 		h.logger.Printf("Error unmarshalling payload: %s", err)
-		return e, err
+		return err
 	}
 
 	err = h.orderSagaService.Create(ctx, payload.UserID, payload.OrderItems, payload.PaymentMethodID)
 	if err != nil {
 		h.logger.Printf("Error storing order: %s", err)
-		return e, err
+		return err
 	}
 	h.logger.Println("Create order saga created successfully")
 
-	return e, nil
+	return nil
 }

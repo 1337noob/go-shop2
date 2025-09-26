@@ -13,7 +13,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/google/uuid"
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"google.golang.org/grpc"
 )
 
@@ -25,7 +25,7 @@ func main() {
 
 	logger := log.New(os.Stdout, "[order_history] ", log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
 
-	db, err := sql.Open("postgres", "postgres://order_history:order_history@localhost:5439/order_history?sslmode=disable")
+	db, err := sql.Open("pgx", "postgres://order_history:order_history@localhost:5439/order_history?sslmode=disable")
 	if err != nil {
 		logger.Fatal("failed to connect to database", "error", err)
 	}

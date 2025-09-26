@@ -3,9 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"github.com/IBM/sarama"
-	"github.com/google/uuid"
-	_ "github.com/lib/pq"
 	"log"
 	"os"
 	"shop/inventory/internal/handler"
@@ -15,6 +12,10 @@ import (
 	"shop/pkg/inbox"
 	"shop/pkg/outbox"
 	"time"
+
+	"github.com/IBM/sarama"
+	"github.com/google/uuid"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func main() {
@@ -22,7 +23,7 @@ func main() {
 
 	logger := log.New(os.Stdout, "[inventory] ", log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
 
-	db, err := sql.Open("postgres", "postgres://inventory:inventory@localhost:5434/inventory?sslmode=disable")
+	db, err := sql.Open("pgx", "postgres://inventory:inventory@localhost:5434/inventory?sslmode=disable")
 	if err != nil {
 		logger.Fatal("failed to connect to database", "error", err)
 	}

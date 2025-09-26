@@ -18,7 +18,6 @@ import (
 	"github.com/IBM/sarama"
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	//_ "github.com/lib/pq"
 	"google.golang.org/grpc"
 )
 

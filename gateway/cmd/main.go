@@ -17,6 +17,7 @@ import (
 	"github.com/IBM/sarama"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	_ "github.com/jackc/pgx/v5/stdlib"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -24,7 +25,7 @@ import (
 func main() {
 	logger := log.New(os.Stdout, "[gateway] ", log.LstdFlags|log.Lmicroseconds|log.Lshortfile)
 
-	db, err := sql.Open("postgres", "postgres://gateway:gateway@localhost:5438/gateway?sslmode=disable")
+	db, err := sql.Open("pgx", "postgres://gateway:gateway@localhost:5438/gateway?sslmode=disable")
 	if err != nil {
 		logger.Fatal("failed to connect to database", "error", err)
 	}
@@ -48,7 +49,7 @@ func main() {
 	sessionMiddleware := middleware.NewSessionMiddleware(
 		redisRepo,
 		"session_id",
-		time.Second*60,
+		time.Minute*60,
 	)
 
 	out := outbox.NewPostgresOutbox()
