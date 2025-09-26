@@ -11,6 +11,7 @@ import (
 	"shop/pkg/outbox"
 	"shop/pkg/proto"
 	"shop/pkg/types"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -35,11 +36,6 @@ func NewOrderHandler(db *sql.DB, outbox outbox.Outbox, orderHistoryServiceClient
 type CreateOrderRequest struct {
 	PaymentMethodID string       `json:"payment_method_id"`
 	OrderItems      []types.Item `json:"order_items"`
-}
-
-type GetMyOrdersRequest struct {
-	Page  int `json:"page"`
-	Limit int `json:"limit"`
 }
 
 func (o *OrderHandler) CreateOrder(w http.ResponseWriter, r *http.Request) {
@@ -122,16 +118,34 @@ func (o *OrderHandler) GetMyOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req GetMyOrdersRequest
+	queryParams := r.URL.Query()
 
-	err := json.NewDecoder(r.Body).Decode(&req)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	page := queryParams.Get("page")
+	limit := queryParams.Get("limit")
+	if page == "" {
+		page = "1"
 	}
+	if limit == "" {
+		limit = "10"
+	}
+
+	pageInt, err := strconv.Atoi(page)
+	if err != nil {
+		o.logger.Println("Failed to convert page to int")
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	limitInt, err := strconv.Atoi(limit)
+	if err != nil {
+		o.logger.Println("Failed to convert limit to int")
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	grpcRequest := proto.GetOrdersRequest{
 		UserId: session.UserID,
-		Page:   int64(req.Page),
-		Limit:  int64(req.Limit),
+		Page:   int64(pageInt),
+		Limit:  int64(limitInt),
 	}
 
 	orders, err := o.orderHistoryServiceClient.GetOrders(r.Context(), &grpcRequest)

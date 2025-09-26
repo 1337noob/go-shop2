@@ -35,7 +35,7 @@ func main() {
 		logger.Fatal("failed to ping database", "error", err)
 	}
 
-	orderRepo := repository.NewPostgresOrderRepository()
+	orderRepo := repository.NewPostgresOrderRepository(db)
 
 	brokers := []string{"localhost:9093"}
 
@@ -81,7 +81,7 @@ func main() {
 
 	go br.StartConsume([]string{orderEventTopic, productEventTopic, inventoryEventTopic, paymentEventTopic})
 
-	svc := handler.NewGrpcHandler(db, orderRepo, logger)
+	svc := handler.NewGrpcHandler(orderRepo, logger)
 	lis, err := net.Listen("tcp", ":50052")
 	if err != nil {
 		logger.Fatalf("Failed to listen: %v", err)

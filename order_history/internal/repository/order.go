@@ -15,10 +15,14 @@ type OrderRepository interface {
 	GetByUserID(ctx context.Context, userID string, page int, limit int) ([]*model.Order, error)
 }
 
-type PostgresOrderRepository struct{}
+type PostgresOrderRepository struct {
+	db *sql.DB
+}
 
-func NewPostgresOrderRepository() *PostgresOrderRepository {
-	return &PostgresOrderRepository{}
+func NewPostgresOrderRepository(db *sql.DB) *PostgresOrderRepository {
+	return &PostgresOrderRepository{
+		db: db,
+	}
 }
 
 func (o *PostgresOrderRepository) Create(ctx context.Context, order *model.Order) error {
@@ -129,15 +133,11 @@ func (o *PostgresOrderRepository) Update(ctx context.Context, order *model.Order
 }
 
 func (o *PostgresOrderRepository) GetByUserID(ctx context.Context, userID string, page int, limit int) ([]*model.Order, error) {
-	tx, ok := ctx.Value("tx").(*sql.Tx)
-	if !ok {
-		return nil, errors.New("transaction not found in context")
-	}
 
 	offset := (page - 1) * limit
 
 	query := `SELECT id, user_id, order_items, payment_id, payment_method_id, payment_type, payment_gateway, payment_sum, payment_external_id, payment_status, status, created_at, updated_at FROM order_history WHERE user_id = $1 ORDER BY created_at DESC OFFSET $2 LIMIT $3`
-	rows, err := tx.QueryContext(ctx, query, userID, offset, limit)
+	rows, err := o.db.QueryContext(ctx, query, userID, offset, limit)
 	if err != nil {
 		return nil, err
 	}
