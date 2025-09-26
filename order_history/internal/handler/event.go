@@ -125,6 +125,18 @@ func (h *EventHandler) Handle(message broker.Message) error {
 			h.logger.Printf("Error handling order completed: %s", err)
 			return err
 		}
+	case event.InventoryReserveFailed:
+		err = h.handleInventoryReserveFailed(ctxWithTx, e)
+		if err != nil {
+			h.logger.Printf("Error handling inventory reserve failed: %s", err)
+			return err
+		}
+	case event.PaymentFailed:
+		err = h.handlePaymentFailed(ctxWithTx, e)
+		if err != nil {
+			h.logger.Printf("Error handling payment failed: %s", err)
+			return err
+		}
 	default:
 		h.logger.Printf("Invalid event type: %s", e.Type)
 	}
@@ -289,6 +301,62 @@ func (h *EventHandler) handleOrderCompleted(ctx context.Context, e event.Event) 
 	}
 
 	order.Status = model.StatusOrderCompleted
+	order.UpdatedAt = time.Now()
+
+	err = h.orderRepo.Update(ctx, order)
+	if err != nil {
+		h.logger.Printf("Error updating order: %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func (h *EventHandler) handleInventoryReserveFailed(ctx context.Context, e event.Event) error {
+	h.logger.Printf("Handling inventory reserve failed event: %+v", e)
+
+	var payload event.InventoryReserveFailedPayload
+	err := json.Unmarshal(e.Payload, &payload)
+	if err != nil {
+		h.logger.Printf("Error unmarshalling payload: %s", err)
+		return err
+	}
+
+	order, err := h.orderRepo.FindByID(ctx, payload.OrderID)
+	if err != nil {
+		h.logger.Printf("Error finding order: %s", err)
+		return err
+	}
+
+	order.Status = model.StatusInventoryReserveFailed
+	order.UpdatedAt = time.Now()
+
+	err = h.orderRepo.Update(ctx, order)
+	if err != nil {
+		h.logger.Printf("Error updating order: %s", err)
+		return err
+	}
+
+	return nil
+}
+
+func (h *EventHandler) handlePaymentFailed(ctx context.Context, e event.Event) error {
+	h.logger.Printf("Handling payment failed event: %+v", e)
+
+	var payload event.PaymentFailedPayload
+	err := json.Unmarshal(e.Payload, &payload)
+	if err != nil {
+		h.logger.Printf("Error unmarshalling payload: %s", err)
+		return err
+	}
+
+	order, err := h.orderRepo.FindByID(ctx, payload.OrderID)
+	if err != nil {
+		h.logger.Printf("Error finding order: %s", err)
+		return err
+	}
+
+	order.Status = model.StatusPaymentFailed
 	order.UpdatedAt = time.Now()
 
 	err = h.orderRepo.Update(ctx, order)

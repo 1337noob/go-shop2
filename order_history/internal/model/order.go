@@ -13,7 +13,12 @@ const (
 	StatusInventoryReserved OrderStatus = "inventory_reserved"
 	StatusPaymentCompleted  OrderStatus = "payment_completed"
 	StatusOrderCompleted    OrderStatus = "order_completed"
-	StatusOrderCancelled    OrderStatus = "order_cancelled"
+
+	StatusOrderCancelled OrderStatus = "order_cancelled"
+
+	StatusProductsValidationFailed OrderStatus = "products_validation_failed"
+	StatusInventoryReserveFailed   OrderStatus = "inventory_reserve_failed"
+	StatusPaymentFailed            OrderStatus = "payment_failed"
 )
 
 type Order struct {
