@@ -34,7 +34,7 @@ func main() {
 	if err != nil {
 		logger.Fatal("failed to ping database", "error", err)
 	}
-	// Инициализация Redis
+
 	redisRepo, err := repository.NewRedisSessionRepository(
 		"localhost:6379",
 		"",
@@ -64,19 +64,19 @@ func main() {
 	defer orderHistoryConn.Close()
 	orderHistoryClient := proto.NewOrderHistoryServiceClient(orderHistoryConn)
 
-	productConn, err := grpc.NewClient(
+	productServiceConn, err := grpc.NewClient(
 		"localhost:50051",
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
-	defer productConn.Close()
-	productClient := proto.NewProductServiceClient(productConn)
+	defer productServiceConn.Close()
+	productServiceClient := proto.NewProductServiceClient(productServiceConn)
 
 	authHandler := handler.NewAuthHandler(db, sessionMiddleware, userRepo)
 	orderHandler := handler.NewOrderHandler(db, out, orderHistoryClient, logger)
-	productHandler := handler.NewProductHandler(db, out, productClient, logger)
+	productHandler := handler.NewProductHandler(db, out, productServiceClient, logger)
 
 	router := mux.NewRouter()
 

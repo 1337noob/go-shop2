@@ -12,6 +12,7 @@ const (
 	StepStatusRunning   StepStatus = "running"
 	StepStatusCompleted StepStatus = "completed"
 	StepStatusFailed    StepStatus = "failed"
+	StepStatusSkipped   StepStatus = "skipped"
 )
 
 type Step struct {

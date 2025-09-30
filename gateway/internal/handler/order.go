@@ -155,8 +155,13 @@ func (o *OrderHandler) GetMyOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	response := map[string]interface{}{
+		"success": true,
+		"orders":  orders.GetOrders(),
+	}
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(orders)
+	json.NewEncoder(w).Encode(response)
 
 	o.logger.Println("GetOrdersByUserID handler finish")
 }

@@ -10,5 +10,4 @@ ValidateProducts -> ProductsValidated
 ReserveInventory -> InventoryReserved
 ProcessPayment -> PaymentProcessed
 CompleteOrder -> OrderCompleted
-SendNotification -> NotificationSent
 

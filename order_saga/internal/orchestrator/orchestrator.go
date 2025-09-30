@@ -80,6 +80,7 @@ func (o *Orchestrator) executeNextStep(ctx context.Context, s *model.Saga) error
 	if err != nil {
 		return err
 	}
+
 	cmd := command.Command{
 		ID:      uuid.New().String(),
 		Type:    currentStep.Command,
@@ -120,7 +121,7 @@ func (o *Orchestrator) compensateNextStep(ctx context.Context, s *model.Saga) er
 
 	currentStep := s.Steps[s.CurrentStep]
 	if currentStep.Compensate == "" {
-		s.Steps[s.CurrentStep].CompensateStatus = model.StepStatusCompleted
+		s.Steps[s.CurrentStep].CompensateStatus = model.StepStatusSkipped
 		s.CurrentStep--
 		err := o.repo.Update(ctx, s)
 		if err != nil {
@@ -243,8 +244,8 @@ func (o *Orchestrator) handleSuccessCompensatingReply(ctx context.Context, s *mo
 
 func (o *Orchestrator) handleFailCompensatingReply(ctx context.Context, s *model.Saga, e event.Event) error {
 	o.logger.Println("Saga start handle fail compensating event: ", e)
-	// TODO implement retry
-	log.Println("TODO implement retry ?")
+
+	// TODO retry ?
 
 	o.logger.Println("Saga finish handle fail compensating event: ", e)
 	return nil
@@ -292,7 +293,6 @@ func (o *Orchestrator) HandleEvent(ctx context.Context, event event.Event) error
 
 func (o *Orchestrator) updatePayload(sagaPayload types.SagaPayload, e event.Event) (types.SagaPayload, error) {
 	o.logger.Println("Saga start update payload")
-	o.logger.Println(e.Payload)
 
 	switch e.Type {
 
@@ -303,10 +303,8 @@ func (o *Orchestrator) updatePayload(sagaPayload types.SagaPayload, e event.Even
 			return types.SagaPayload{}, err
 		}
 		sagaPayload.OrderID = eventPayload.OrderID
-		//sagaPayload.UserID = eventPayload.UserID
-		//sagaPayload.PaymentMethodID = eventPayload.PaymentMethodID
-		//sagaPayload.OrderItems = eventPayload.OrderItems
 	case event.OrderCreateFailed:
+		// TODO ?
 
 	case event.ProductsValidated:
 		var eventPayload event.ProductsValidatedPayload
@@ -335,6 +333,7 @@ func (o *Orchestrator) updatePayload(sagaPayload types.SagaPayload, e event.Even
 	case event.ProductsValidationFailed:
 
 	case event.InventoryReserved:
+
 	case event.InventoryReserveFailed:
 
 	case event.PaymentCompleted:
@@ -349,9 +348,11 @@ func (o *Orchestrator) updatePayload(sagaPayload types.SagaPayload, e event.Even
 	case event.PaymentFailed:
 
 	case event.PaymentRefunded:
+
 	case event.PaymentRefundFailed:
 
 	case event.OrderCompleted:
+
 	case event.OrderCompleteFailed:
 
 	case event.OrderCancelled:
