@@ -1,0 +1,197 @@
+{
+	"info": {
+		"_postman_id": "41c9ce7f-7f86-4a3a-a461-6c82fbc26679",
+		"name": "shop2",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "21151962"
+	},
+	"item": [
+		{
+			"name": "register",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"name\": \"user1\",\n    \"email\": \"user1@example.com\",\n    \"password\": \"password\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "localhost:8081/auth/register"
+			},
+			"response": []
+		},
+		{
+			"name": "login",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"email\": \"user1@example.com\",\n    \"password\": \"password\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "localhost:8081/auth/login"
+			},
+			"response": []
+		},
+		{
+			"name": "profile",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": {
+						"token": "7161db57-46ee-4f9d-b774-6102b467a604"
+					}
+				},
+				"method": "GET",
+				"header": [],
+				"url": "localhost:8081/auth/profile"
+			},
+			"response": []
+		},
+		{
+			"name": "create order",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": {
+						"token": "7161db57-46ee-4f9d-b774-6102b467a604"
+					}
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"payment_method_id\": \"method-1\",\n    \"order_items\": [\n        {\n            \"product_id\": \"product-1\",\n            \"quantity\": 11\n        },\n        {\n            \"product_id\": \"product-2\",\n            \"quantity\": 21\n        },\n        {\n            \"product_id\": \"product-3\",\n            \"quantity\": 31\n        }\n    ]\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "localhost:8081/api/orders"
+			},
+			"response": []
+		},
+		{
+			"name": "my-orders",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": {
+						"token": "7161db57-46ee-4f9d-b774-6102b467a604"
+					}
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:8081/api/my-orders?page=1&limit=10",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"my-orders"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "limit",
+							"value": "10"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "categories",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:8081/api/categories?page=1&limit=10",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"categories"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "limit",
+							"value": "10"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "products",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "localhost:8081/api/products?category_id=cat-1&page=1&limit=10",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"api",
+						"products"
+					],
+					"query": [
+						{
+							"key": "category_id",
+							"value": "cat-1"
+						},
+						{
+							"key": "page",
+							"value": "1"
+						},
+						{
+							"key": "limit",
+							"value": "10"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "logout",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": {
+						"token": "0f0fe8c1-5d6d-4882-aa03-cc9aa5f49d14"
+					}
+				},
+				"method": "POST",
+				"header": [],
+				"url": "localhost:8081/auth/logout"
+			},
+			"response": []
+		}
+	]
+}

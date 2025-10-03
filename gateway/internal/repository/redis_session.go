@@ -81,8 +81,6 @@ func (r *RedisSessionRepository) DeleteSession(ctx context.Context, sessionID st
 }
 
 func (r *RedisSessionRepository) DeleteUserSessions(ctx context.Context, userID string) error {
-	// Для production лучше использовать Redis SCAN для поиска сессий по пользователю
-	// Это упрощенная реализация
 	keys, err := r.client.Keys(ctx, r.prefix+"*").Result()
 	if err != nil {
 		return err

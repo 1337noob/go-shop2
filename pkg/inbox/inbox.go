@@ -16,7 +16,6 @@ const (
 type MessageStatus string
 
 type Message struct {
-	//ID          string          `json:"id"`
 	MessageID   string          `json:"message_id"`
 	MessageType string          `json:"message_type"`
 	Topic       string          `json:"topic"`

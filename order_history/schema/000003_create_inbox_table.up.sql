@@ -1,6 +1,5 @@
 CREATE TABLE inbox
 (
---     id           VARCHAR(255) PRIMARY KEY,
     message_id   VARCHAR(255) PRIMARY KEY,
     message_type VARCHAR(255) NOT NULL,
     topic        VARCHAR(255) NOT NULL,

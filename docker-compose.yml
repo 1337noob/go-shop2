@@ -1,7 +1,6 @@
 services:
   kafka:
     image: bitnami/kafka:latest
-    #    container_name: kafka
     ports:
       - "9092:9092"
       - "9093:9093"
@@ -19,7 +18,6 @@ services:
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
-    #    container_name: kafka-ui
     ports:
       - "8080:8080"
     environment:
